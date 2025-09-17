@@ -1,10 +1,3 @@
-//
-//  GRiverApp.swift
-//  GRiver
-//
-//  Created by Alex on 16.09.2025.
-//
-
 import SwiftUI
 
 @main
