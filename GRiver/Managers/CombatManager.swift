@@ -192,7 +192,6 @@ class CombatCalculator {
     }
     
     private static func generateRiskAssessment(successProbability: Double, playerStrength: Double, enemyStrength: Double) -> String {
-        let strengthRatio = playerStrength / enemyStrength
         let probabilityPercent = Int(successProbability * 100)
         
         if successProbability >= 0.8 {

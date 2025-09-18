@@ -59,11 +59,11 @@ class BaseViewModel: ObservableObject {
         canUpgradeBarracks = baseManager.canUpgradeBarracks(with: playerResources)
         
         let unitCost = baseManager.getUnitRecruitmentCost(unitsToBuy)
-        canAffordUnits = playerResources.canAfford(unitCost) && 
+        canAffordUnits = playerResources.canAfford(unitCost) &&
                         baseManager.canRecruitUnits(unitsToBuy, currentUnits: playerResources.units)
         
         let supplyCost = baseManager.getSupplyCost(ammo: ammoToBuy, food: foodToBuy)
-        canAffordSupplies = playerResources.canAfford(supplyCost) && 
+        canAffordSupplies = playerResources.canAfford(supplyCost) &&
                            baseManager.canStoreSupplies(ammo: ammoToBuy, food: foodToBuy, currentResources: playerResources)
     }
     
@@ -88,7 +88,6 @@ class BaseViewModel: ObservableObject {
             return
         }
         
-        let cost = baseManager.getUpgradeCost(for: .storage)
         var tempResources = playerResources
         
         if baseManager.upgradeBuilding(.storage, with: &tempResources) {
@@ -106,7 +105,6 @@ class BaseViewModel: ObservableObject {
             return
         }
         
-        let cost = baseManager.getUpgradeCost(for: .barracks)
         var tempResources = playerResources
         
         if baseManager.upgradeBuilding(.barracks, with: &tempResources) {

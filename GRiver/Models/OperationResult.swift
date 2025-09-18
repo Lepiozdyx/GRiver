@@ -87,7 +87,7 @@ struct OperationResult: Codable {
         case .success:
             switch actionType {
             case .raid: return "Raid completed successfully"
-            case .robbery: return "Robbery executed successfully" 
+            case .robbery: return "Robbery executed successfully"
             case .capture: return "Target captured"
             case .destruction: return "Target destroyed"
             }
@@ -103,7 +103,6 @@ struct OperationResult: Codable {
     
     var detailMessage: String {
         let probabilityPercent = Int(successProbability * 100)
-        let strengthRatio = playerStrength / enemyStrength
         
         if success {
             return "Operation succeeded with \(probabilityPercent)% chance. Your forces proved superior."
