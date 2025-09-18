@@ -34,9 +34,9 @@ struct ContentView: View {
                 // Operation Result Overlay
                 if coordinator.showOperationResult,
                    let result = coordinator.currentOperationResult {
-                    OperationResultOverlay(
-                        result: result,
-                        onDismiss: {
+                    OperationResultStandaloneView(
+                        operationResult: result,
+                        onContinue: {
                             coordinator.hideOperationResult()
                         }
                     )
@@ -158,90 +158,6 @@ struct PlayerBaseIntegratedView: View {
                     }
                 }
             }
-    }
-}
-
-// MARK: - Operation Result Overlay
-struct OperationResultOverlay: View {
-    let result: OperationResult
-    let onDismiss: () -> Void
-    
-    var body: some View {
-        ZStack {
-            // Semi-transparent background
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    onDismiss()
-                }
-            
-            // Result content
-            VStack(spacing: 20) {
-                
-                // Result Header
-                VStack(spacing: 8) {
-                    Text(result.success ? "SUCCESS" : "FAILURE")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(result.success ? .green : .red)
-                    
-                    Text(result.outcomeMessage)
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                }
-                
-                // Action Details
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Action: \(result.actionType.displayName)")
-                    Text("Target: \(result.targetPOI.type.displayName)")
-                    Text("Success Chance: \(Int(result.successProbability * 100))%")
-                }
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                
-                // Resource Changes
-                if !result.resourcesLost.isEmpty || !result.resourcesGained.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Resource Changes")
-                            .font(.headline)
-                        
-                        if !result.resourcesLost.isEmpty {
-                            Text("Lost: \(formatResources(result.resourcesLost))")
-                                .foregroundColor(.red)
-                        }
-                        
-                        if !result.resourcesGained.isEmpty {
-                            Text("Gained: \(formatResources(result.resourcesGained))")
-                                .foregroundColor(.green)
-                        }
-                    }
-                    .font(.subheadline)
-                }
-                
-                // Dismiss Button
-                Button("Continue") {
-                    onDismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            }
-            .padding(24)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(radius: 8)
-            .frame(maxWidth: 400)
-        }
-    }
-    
-    private func formatResources(_ resources: Resource) -> String {
-        var parts: [String] = []
-        
-        if resources.money > 0 { parts.append("\(resources.money) money") }
-        if resources.ammo > 0 { parts.append("\(resources.ammo) ammo") }
-        if resources.food > 0 { parts.append("\(resources.food) food") }
-        if resources.units > 0 { parts.append("\(resources.units) units") }
-        
-        return parts.isEmpty ? "None" : parts.joined(separator: ", ")
     }
 }
 

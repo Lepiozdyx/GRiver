@@ -77,6 +77,10 @@ struct OperationResult: Codable {
         return totalGain - totalLoss
     }
     
+    var successPercentage: Int {
+        return Int(successProbability * 100)
+    }
+    
     // MARK: - Display Properties
     var outcomeMessage: String {
         switch outcome {
