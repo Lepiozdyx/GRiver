@@ -72,38 +72,12 @@ struct ContentView: View {
         case .gameMap:
             GameMapView()
                 .environmentObject(coordinator.getGameSceneViewModel())
+                .environmentObject(coordinator)
                 .navigationBarBackButtonHidden(true)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Menu") {
                             coordinator.navigateToMainMenu()
-                        }
-                        .foregroundColor(.white)
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Base") {
-                            coordinator.navigateToPlayerBase()
-                        }
-                        .foregroundColor(.white)
-                    }
-                }
-            
-        case .playerBase:
-            PlayerBaseView()
-                .environmentObject(coordinator.getBaseViewModel())
-                .navigationBarBackButtonHidden(true)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Back") {
-                            coordinator.navigateBack()
-                        }
-                        .foregroundColor(.white)
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Map") {
-                            coordinator.navigateToGameMap()
                         }
                         .foregroundColor(.white)
                     }
@@ -113,6 +87,7 @@ struct ContentView: View {
             // This state is handled by overlay, fallback to game map
             GameMapView()
                 .environmentObject(coordinator.getGameSceneViewModel())
+                .environmentObject(coordinator)
             
         case .gameOver:
             GameOverView()
@@ -131,38 +106,12 @@ struct ContentView: View {
         case .gameMap:
             GameMapView()
                 .environmentObject(coordinator.getGameSceneViewModel())
+                .environmentObject(coordinator)
                 .navigationBarBackButtonHidden(true)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Menu") {
                             coordinator.navigateToMainMenu()
-                        }
-                        .foregroundColor(.white)
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Base") {
-                            coordinator.navigateToPlayerBase()
-                        }
-                        .foregroundColor(.white)
-                    }
-                }
-            
-        case .playerBase:
-            PlayerBaseView()
-                .environmentObject(coordinator.getBaseViewModel())
-                .navigationBarBackButtonHidden(true)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Back") {
-                            coordinator.navigateBack()
-                        }
-                        .foregroundColor(.white)
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Map") {
-                            coordinator.navigateToGameMap()
                         }
                         .foregroundColor(.white)
                     }
@@ -172,6 +121,7 @@ struct ContentView: View {
             // Handled by overlay, show game map
             GameMapView()
                 .environmentObject(coordinator.getGameSceneViewModel())
+                .environmentObject(coordinator)
             
         case .gameOver:
             GameOverView()

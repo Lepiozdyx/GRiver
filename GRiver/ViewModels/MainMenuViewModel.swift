@@ -5,7 +5,6 @@ import Combine
 enum NavigationDestination: String, CaseIterable {
     case mainMenu = "mainMenu"
     case gameMap = "gameMap"
-    case playerBase = "playerBase"
     case operationResult = "operationResult"
     case gameOver = "gameOver"
     
@@ -13,7 +12,6 @@ enum NavigationDestination: String, CaseIterable {
         switch self {
         case .mainMenu: return "Main Menu"
         case .gameMap: return "Global Map"
-        case .playerBase: return "Player Base"
         case .operationResult: return "Operation Result"
         case .gameOver: return "Game Over"
         }
@@ -87,19 +85,6 @@ class MainMenuViewModel: ObservableObject {
             } else {
                 navigationSubject.send(.startNewGame)
             }
-        }
-    }
-    
-    func handleBaseAction() {
-        if !isGameActive {
-            // Need to start/load game first
-            if hasSavedGame {
-                navigationSubject.send(.continueGame)
-            } else {
-                navigationSubject.send(.startNewGame)
-            }
-        } else {
-            navigationSubject.send(.toPlayerBase)
         }
     }
     
@@ -278,11 +263,6 @@ class MainMenuViewModel: ObservableObject {
     @available(*, deprecated, message: "Use navigation publisher instead")
     func navigateToGameMap() {
         navigationSubject.send(.toGameMap)
-    }
-    
-    @available(*, deprecated, message: "Use navigation publisher instead")
-    func navigateToPlayerBase() {
-        navigationSubject.send(.toPlayerBase)
     }
     
     @available(*, deprecated, message: "Use navigation publisher instead")

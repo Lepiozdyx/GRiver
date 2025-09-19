@@ -118,9 +118,8 @@ struct MainMenuView: View {
     private var mainButtonsSection: some View {
         VStack(spacing: 16) {
             
-            // Play Button - navigation handled externally
+            // Single Play/Continue Button
             Button(action: {
-                // Let the parent coordinator handle the navigation flow
                 viewModel.handlePlayAction()
             }) {
                 HStack {
@@ -129,27 +128,11 @@ struct MainMenuView: View {
                         .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(height: 60)
                 .background(Color.blue)
                 .foregroundColor(.white)
-                .cornerRadius(8)
-            }
-            
-            // Base Button - navigation handled externally
-            Button(action: {
-                // Let the parent coordinator handle the navigation flow
-                viewModel.handleBaseAction()
-            }) {
-                HStack {
-                    Image(systemName: "building.2")
-                    Text("Manage Base")
-                        .fontWeight(.medium)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.green)
-                .foregroundColor(.white)
-                .cornerRadius(8)
+                .cornerRadius(12)
+                .shadow(radius: 2)
             }
         }
     }

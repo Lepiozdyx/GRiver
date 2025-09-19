@@ -8,8 +8,11 @@ struct PlayerBaseView: View {
         ScrollView {
             VStack(spacing: 20) {
                 
-                // MARK: - Header Section
+                // MARK: - Header Section with Navigation Info
                 baseHeaderSection
+                
+                // MARK: - Navigation Hint
+                navigationHintSection
                 
                 // MARK: - Resources Section
                 resourcesSection
@@ -33,7 +36,7 @@ struct PlayerBaseView: View {
             }
             .padding()
         }
-        .navigationTitle("Player Base")
+        .navigationTitle("Command Base")
         .navigationBarHidden(true)
         .alert(viewModel.alertTitle, isPresented: $viewModel.showUpgradeAlert) {
             Button("OK") {
@@ -73,6 +76,29 @@ struct PlayerBaseView: View {
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
+    }
+    
+    // MARK: - Navigation Hint Section
+    private var navigationHintSection: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundColor(.blue)
+                Text("Pro Tip")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.blue)
+                Spacer()
+            }
+            
+            Text("You can now manage your base directly from the tactical map using the 'Base' button in the top-right corner during gameplay.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.leading)
+        }
+        .padding()
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(8)
     }
     
     // MARK: - Resources Section
@@ -486,6 +512,13 @@ struct PlayerBaseView: View {
                     .background(Color.green.opacity(0.1))
                     .cornerRadius(6)
             }
+            
+            // Quick return to map hint
+            Text("Tip: Use the navigation buttons above to return to the tactical map and begin operations.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
         }
         .frame(maxWidth: .infinity)
     }
@@ -493,7 +526,9 @@ struct PlayerBaseView: View {
 
 // MARK: - Preview
 #Preview {
-    PlayerBaseView()
-        .environmentObject(BaseViewModel())
-        .preferredColorScheme(.dark)
+    NavigationView {
+        PlayerBaseView()
+            .environmentObject(BaseViewModel())
+            .preferredColorScheme(.dark)
+    }
 }

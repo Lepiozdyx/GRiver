@@ -6,7 +6,6 @@ import SwiftUI
 enum AppFlowState: String, CaseIterable {
     case mainMenu = "mainMenu"
     case gameMap = "gameMap"
-    case playerBase = "playerBase"
     case operationResult = "operationResult"
     case gameOver = "gameOver"
     
@@ -14,7 +13,6 @@ enum AppFlowState: String, CaseIterable {
         switch self {
         case .mainMenu: return "Main Menu"
         case .gameMap: return "Global Map"
-        case .playerBase: return "Player Base"
         case .operationResult: return "Operation Result"
         case .gameOver: return "Game Over"
         }
@@ -29,6 +27,7 @@ class AppCoordinator: ObservableObject {
     @Published var navigationPath = NavigationPath()
     @Published var showActionOverlay: Bool = false
     @Published var showOperationResult: Bool = false
+    @Published var showBaseOverlay: Bool = false
     
     // Overlay state
     @Published var selectedPOI: PointOfInterest?
@@ -70,8 +69,6 @@ class AppCoordinator: ObservableObject {
         switch request {
         case .toGameMap:
             navigateToGameMap()
-        case .toPlayerBase:
-            navigateToPlayerBase()
         case .toMainMenu:
             navigateToMainMenu()
         case .startNewGame:
@@ -122,14 +119,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    func navigateToPlayerBase() {
-        ensureGameStateManager()
-        withAnimation {
-            currentFlow = .playerBase
-            navigationPath.append(AppFlowState.playerBase)
-        }
-    }
-    
     func navigateToOperationResult() {
         withAnimation {
             currentFlow = .operationResult
@@ -166,6 +155,19 @@ class AppCoordinator: ObservableObject {
             currentFlow = .gameMap
         } else {
             currentFlow = .mainMenu
+        }
+    }
+    
+    // MARK: - Base Overlay Management
+    func showBaseManagement() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showBaseOverlay = true
+        }
+    }
+    
+    func hideBaseManagement() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showBaseOverlay = false
         }
     }
     
@@ -340,6 +342,7 @@ class AppCoordinator: ObservableObject {
     func hideAllOverlays() {
         showActionOverlay = false
         showOperationResult = false
+        showBaseOverlay = false
         selectedPOI = nil
         currentOperationResult = nil
         actionOverlayViewModel?.reset()
@@ -377,7 +380,7 @@ class AppCoordinator: ObservableObject {
         info += "Current Flow: \(currentFlow.displayName)\n"
         info += "Navigation Depth: \(navigationPath.count)\n"
         info += "Game Active: \(gameStateManager?.isGameActive ?? false)\n"
-        info += "Overlays: ActionOverlay=\(showActionOverlay), Result=\(showOperationResult)\n"
+        info += "Overlays: ActionOverlay=\(showActionOverlay), Result=\(showOperationResult), Base=\(showBaseOverlay)\n"
         
         if let gameManager = gameStateManager {
             let state = gameManager.exportGameState()
@@ -404,7 +407,6 @@ class AppCoordinator: ObservableObject {
 // MARK: - Navigation Request Enum
 enum NavigationRequest {
     case toGameMap
-    case toPlayerBase
     case toMainMenu
     case startNewGame
     case continueGame
