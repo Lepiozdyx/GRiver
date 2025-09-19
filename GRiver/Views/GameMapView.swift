@@ -1,49 +1,64 @@
 import SwiftUI
 import SpriteKit
 
-// MARK: - Game Map View
 struct GameMapView: View {
     @EnvironmentObject var viewModel: GameSceneViewModel
     @EnvironmentObject var coordinator: AppCoordinator
     
     var body: some View {
         ZStack {
-            // SpriteKit Scene
-            SpriteView(scene: viewModel.createScene())
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black)
-                .onReceive(NotificationCenter.default.publisher(for: .poiSelected)) { notification in
-                    if let userInfo = notification.userInfo,
-                       let poi = userInfo["poi"] as? PointOfInterest,
-                       let position = userInfo["position"] as? CGPoint {
-                        handlePOISelected(poi, at: position)
+            if viewModel.isSceneReady, let scene = viewModel.scene {
+                SpriteView(scene: scene)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black)
+                    .onReceive(NotificationCenter.default.publisher(for: .poiSelected)) { notification in
+                        if let userInfo = notification.userInfo,
+                           let poi = userInfo["poi"] as? PointOfInterest,
+                           let position = userInfo["position"] as? CGPoint {
+                            handlePOISelected(poi, at: position)
+                        }
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: .poiDeselected)) { _ in
+                        handlePOIDeselected()
+                    }
+            } else {
+                ZStack {
+                    Color.black
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        
+                        Text("Loading Tactical Map...")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                        
+                        Text("Initializing POI data...")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .poiDeselected)) { _ in
-                    handlePOIDeselected()
-                }
+            }
             
-            // HUD Overlay
-            VStack {
-                // Top HUD
-                HStack(alignment: .top) {
-                    // Map statistics
-                    mapStatsOverlay
+            if viewModel.isSceneReady {
+                VStack {
+                    HStack(alignment: .top) {
+                        mapStatsOverlay
+                        
+                        Spacer()
+                        
+                        mapControlButtons
+                    }
+                    .padding()
                     
                     Spacer()
                     
-                    // Control buttons
-                    mapControlButtons
+                    bottomOverlay
                 }
-                .padding()
-                
-                Spacer()
-                
-                // Bottom instructions or selected POI info
-                bottomOverlay
             }
             
-            // Base Management Overlay
             if coordinator.showBaseOverlay {
                 baseManagementOverlay
                     .zIndex(20)
@@ -53,11 +68,20 @@ struct GameMapView: View {
         .navigationBarHidden(true)
         .statusBarHidden()
         .onAppear {
-            viewModel.refreshMap()
+            ensureSceneInitialization()
         }
     }
     
-    // MARK: - Map Stats Overlay
+    private func ensureSceneInitialization() {
+        if !viewModel.isSceneReady && coordinator.isGameActive {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if !viewModel.isSceneReady {
+                    viewModel.setGameStateManager(coordinator.gameStateManager)
+                }
+            }
+        }
+    }
+    
     private var mapStatsOverlay: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("MAP STATUS")
@@ -74,33 +98,24 @@ struct GameMapView: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Map Control Buttons
     private var mapControlButtons: some View {
         VStack(spacing: 8) {
+            Button("Menu") {
+                coordinator.navigateToMainMenu()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .foregroundColor(.white)
+            
             Button("Base") {
                 coordinator.showBaseManagement()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
             .foregroundColor(.white)
-            
-            Button("Reset View") {
-                viewModel.resetCamera()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .foregroundColor(.white)
-            
-            Button("Refresh") {
-                viewModel.refreshMap()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .foregroundColor(.white)
         }
     }
     
-    // MARK: - Bottom Overlay
     private var bottomOverlay: some View {
         Group {
             if let selectedPOI = viewModel.selectedPOI {
@@ -113,10 +128,8 @@ struct GameMapView: View {
         }
     }
     
-    // MARK: - Selected POI Info
     private func selectedPOIInfo(_ poi: PointOfInterest) -> some View {
         VStack(spacing: 8) {
-            // POI Details
             VStack(spacing: 4) {
                 Text(poi.type.displayName)
                     .font(.headline)
@@ -137,7 +150,6 @@ struct GameMapView: View {
                 }
             }
             
-            // Action Buttons
             HStack(spacing: 12) {
                 Button("Focus") {
                     viewModel.focusOnPOI(poi)
@@ -147,7 +159,6 @@ struct GameMapView: View {
                 
                 if poi.isOperational {
                     Button("Select") {
-                        // This will trigger the action overlay
                         selectPOIForAction(poi)
                     }
                     .buttonStyle(.bordered)
@@ -169,7 +180,6 @@ struct GameMapView: View {
         .shadow(radius: 4)
     }
     
-    // MARK: - Map Instructions
     private var mapInstructions: some View {
         VStack(spacing: 4) {
             Text("TACTICAL MAP")
@@ -190,19 +200,15 @@ struct GameMapView: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Base Management Overlay
     private var baseManagementOverlay: some View {
         ZStack {
-            // Semi-transparent background
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .onTapGesture {
                     coordinator.hideBaseManagement()
                 }
             
-            // Base management content
             VStack(spacing: 0) {
-                // Header with close button
                 HStack {
                     Text("COMMAND BASE")
                         .font(.title2)
@@ -220,7 +226,6 @@ struct GameMapView: View {
                 .padding()
                 .background(Color(.systemBackground))
                 
-                // Base management view
                 ScrollView {
                     PlayerBaseOverlayContent()
                         .environmentObject(coordinator.getBaseViewModel())
@@ -235,7 +240,6 @@ struct GameMapView: View {
         }
     }
     
-    // MARK: - POI Interaction Handlers
     private func handlePOISelected(_ poi: PointOfInterest, at position: CGPoint) {
         viewModel.selectPOI(poi, at: position)
     }
@@ -245,10 +249,8 @@ struct GameMapView: View {
     }
     
     private func selectPOIForAction(_ poi: PointOfInterest) {
-        // Convert POI position to screen coordinates for overlay
-        let screenPosition = CGPoint(x: 400, y: 300) // Center of screen for now
+        let screenPosition = CGPoint(x: 400, y: 300)
         
-        // Send notification to parent coordinator to show action overlay
         NotificationCenter.default.post(
             name: .requestActionOverlay,
             object: nil,
@@ -260,26 +262,20 @@ struct GameMapView: View {
     }
 }
 
-// MARK: - Player Base Overlay Content
 struct PlayerBaseOverlayContent: View {
     @EnvironmentObject var viewModel: BaseViewModel
     
     var body: some View {
         VStack(spacing: 16) {
             
-            // MARK: - Resources Section
             resourcesSection
             
-            // MARK: - Buildings Section
             buildingsSection
             
-            // MARK: - Unit Recruitment Section
             unitRecruitmentSection
             
-            // MARK: - Supply Purchase Section
             supplyPurchaseSection
             
-            // MARK: - Base Status Section
             baseStatusSection
         }
         .alert(viewModel.alertTitle, isPresented: $viewModel.showUpgradeAlert) {
@@ -294,7 +290,6 @@ struct PlayerBaseOverlayContent: View {
         }
     }
     
-    // MARK: - Resources Section
     private var resourcesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Current Resources")
@@ -341,7 +336,6 @@ struct PlayerBaseOverlayContent: View {
         .cornerRadius(4)
     }
     
-    // MARK: - Buildings Section
     private var buildingsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Buildings")
@@ -417,7 +411,6 @@ struct PlayerBaseOverlayContent: View {
         .padding(.vertical, 4)
     }
     
-    // MARK: - Unit Recruitment Section
     private var unitRecruitmentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Unit Recruitment")
@@ -473,7 +466,6 @@ struct PlayerBaseOverlayContent: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Supply Purchase Section
     private var supplyPurchaseSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Supplies")
@@ -563,7 +555,6 @@ struct PlayerBaseOverlayContent: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Base Status Section
     private var baseStatusSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Base Status")
@@ -598,12 +589,10 @@ struct PlayerBaseOverlayContent: View {
     }
 }
 
-// MARK: - Notification Extensions
 extension Notification.Name {
     static let requestActionOverlay = Notification.Name("requestActionOverlay")
 }
 
-// MARK: - Preview
 #Preview {
     GameMapView()
         .environmentObject(GameSceneViewModel())

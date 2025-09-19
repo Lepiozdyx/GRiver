@@ -2,58 +2,67 @@ import Foundation
 import Combine
 import SpriteKit
 
-// MARK: - Game Scene View Model
 class GameSceneViewModel: ObservableObject {
     
-    // MARK: - Properties
     @Published var selectedPOI: PointOfInterest?
     @Published var showActionOverlay: Bool = false
     @Published var overlayPosition: CGPoint = .zero
+    @Published var isSceneReady: Bool = false
+    @Published var scene: GameScene?
     
     private var gameStateManager: GameStateManager?
-    private var gameScene: GameScene?
     private var cancellables = Set<AnyCancellable>()
     
-    // MARK: - Initialization
     init() {
-        // Default initialization for cases where no GameStateManager is provided yet
+        
     }
     
     convenience init(gameStateManager: GameStateManager?) {
         self.init()
-        self.gameStateManager = gameStateManager
+        setGameStateManager(gameStateManager)
     }
     
-    // MARK: - GameStateManager Integration
-    func setGameStateManager(_ manager: GameStateManager) {
-        self.gameStateManager = manager
-        refreshMap()
-    }
-    
-    // MARK: - Scene Setup
-    func createScene() -> GameScene {
-        let scene = GameScene()
-        scene.gameDelegate = self
-        
-        // Set up scene with current POI data
-        if let gameManager = gameStateManager {
-            let mapManager = MapManager(pois: gameManager.pointsOfInterest)
-            scene.setMapManager(mapManager)
-        } else {
-            // Fallback to default POIs for scene creation
-            let mapManager = MapManager()
-            scene.setMapManager(mapManager)
+    func setGameStateManager(_ manager: GameStateManager?) {
+        guard let manager = manager else {
+            isSceneReady = false
+            scene = nil
+            gameStateManager = nil
+            return
         }
         
-        // Configure scene size for landscape
-        scene.size = CGSize(width: 1024, height: 768)
-        scene.scaleMode = .aspectFit
+        self.gameStateManager = manager
         
-        self.gameScene = scene
-        return scene
+        if scene == nil || !isSceneReady {
+            initializeScene()
+        } else {
+            updateMapData()
+        }
     }
     
-    // MARK: - POI Access
+    private func initializeScene() {
+        guard let gameManager = gameStateManager else {
+            isSceneReady = false
+            return
+        }
+        
+        isSceneReady = false
+        
+        let newScene = GameScene()
+        newScene.gameDelegate = self
+        newScene.size = CGSize(width: 1024, height: 768)
+        newScene.scaleMode = .aspectFit
+        
+        let mapManager = MapManager(pois: gameManager.pointsOfInterest)
+        newScene.setMapManager(mapManager)
+        
+        self.scene = newScene
+        self.isSceneReady = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            newScene.updatePOIs()
+        }
+    }
+    
     var pointsOfInterest: [PointOfInterest] {
         return gameStateManager?.pointsOfInterest ?? []
     }
@@ -70,24 +79,17 @@ class GameSceneViewModel: ObservableObject {
         return pointsOfInterest.filter { $0.isDestroyed }
     }
     
-    // MARK: - Map Control
     func focusOnPOI(_ poi: PointOfInterest) {
-        gameScene?.focusOnPOI(poi, animated: true)
+        scene?.focusOnPOI(poi, animated: true)
     }
     
-    func resetCamera() {
-        gameScene?.resetCameraPosition(animated: true)
-    }
-    
-    func refreshMap() {
+    func updateMapData() {
         guard let gameManager = gameStateManager else { return }
         
-        // Update scene with latest POI data
         let mapManager = MapManager(pois: gameManager.pointsOfInterest)
-        gameScene?.setMapManager(mapManager)
-        gameScene?.updatePOIs()
+        scene?.setMapManager(mapManager)
+        scene?.updatePOIs()
         
-        // Clear selection if selected POI no longer exists or is not operational
         if let selected = selectedPOI {
             if let updatedPOI = gameManager.getPOI(withID: selected.id) {
                 selectedPOI = updatedPOI
@@ -98,22 +100,19 @@ class GameSceneViewModel: ObservableObject {
     }
     
     func updatePOI(_ poi: PointOfInterest) {
-        gameScene?.updatePOI(with: poi.id)
+        scene?.updatePOI(with: poi.id)
         
-        // Update selected POI if it matches
         if selectedPOI?.id == poi.id {
             selectedPOI = poi
         }
     }
     
-    // MARK: - POI Selection
     func deselectPOI() {
         selectedPOI = nil
         showActionOverlay = false
     }
     
     func selectPOI(_ poi: PointOfInterest, at position: CGPoint) {
-        // Ensure we have the latest POI data from game state
         if let gameManager = gameStateManager,
            let currentPOI = gameManager.getPOI(withID: poi.id) {
             selectedPOI = currentPOI
@@ -125,7 +124,6 @@ class GameSceneViewModel: ObservableObject {
         showActionOverlay = true
     }
     
-    // MARK: - Game State Queries
     func getPOI(withID id: UUID) -> PointOfInterest? {
         return gameStateManager?.getPOI(withID: id)
     }
@@ -134,7 +132,6 @@ class GameSceneViewModel: ObservableObject {
         return gameStateManager?.getPOI(at: position, tolerance: tolerance)
     }
     
-    // MARK: - Map Statistics
     var mapStatistics: String {
         guard let gameManager = gameStateManager else {
             return "No game data"
@@ -160,7 +157,6 @@ class GameSceneViewModel: ObservableObject {
         return "Mission Progress: \(progress)%"
     }
     
-    // MARK: - Resource Information
     var currentResources: Resource {
         return gameStateManager?.currentResources ?? Resource.zero
     }
@@ -170,7 +166,6 @@ class GameSceneViewModel: ObservableObject {
         return resources.units > 0 && (resources.ammo > 0 || resources.food > 0)
     }
     
-    // MARK: - Game Status
     var isGameActive: Bool {
         return gameStateManager?.isGameActive ?? false
     }
@@ -183,7 +178,6 @@ class GameSceneViewModel: ObservableObject {
         return Int(currentAlertLevel * 100)
     }
     
-    // MARK: - Map Validation
     func validateMapState() -> String? {
         guard let gameManager = gameStateManager else {
             return "No game state available"
@@ -202,7 +196,6 @@ class GameSceneViewModel: ObservableObject {
         return nil
     }
     
-    // MARK: - Debug Information
     var debugInfo: String {
         guard let gameManager = gameStateManager else {
             return "No game state"
@@ -215,34 +208,26 @@ class GameSceneViewModel: ObservableObject {
         Alert Level: \(state.alertPercentage)%
         Resources: \(state.resources.totalValue) total value
         Can Perform Operations: \(canPerformOperations)
+        Scene Ready: \(isSceneReady)
+        POI Count: \(pointsOfInterest.count)
         """
     }
     
-    // MARK: - Reset and Cleanup
-    func resetMapToDefault() {
-        guard let gameManager = gameStateManager else { return }
-        
-        // Reset game state (this should reset POIs to default)
-        gameManager.resetGame()
-        
-        // Refresh the map display
-        refreshMap()
-        deselectPOI()
+    func forceRefresh() {
+        guard isSceneReady else { return }
+        updateMapData()
     }
     
     func cleanup() {
-        gameScene = nil
+        scene = nil
         selectedPOI = nil
         showActionOverlay = false
+        isSceneReady = false
+        gameStateManager = nil
         cancellables.removeAll()
     }
-    
-    // MARK: - Deprecated Test Methods (removed)
-    // These methods are no longer needed as operations are handled through the action overlay system
-    // and game state manager
 }
 
-// MARK: - Game Scene Delegate
 extension GameSceneViewModel: GameSceneDelegate {
     func didSelectPOI(_ poi: PointOfInterest, at position: CGPoint) {
         DispatchQueue.main.async {

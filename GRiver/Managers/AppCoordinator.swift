@@ -2,7 +2,6 @@ import Foundation
 import Combine
 import SwiftUI
 
-// MARK: - App Flow State
 enum AppFlowState: String, CaseIterable {
     case mainMenu = "mainMenu"
     case gameMap = "gameMap"
@@ -19,35 +18,28 @@ enum AppFlowState: String, CaseIterable {
     }
 }
 
-// MARK: - App Coordinator
 class AppCoordinator: ObservableObject {
     
-    // MARK: - Published Properties
     @Published var currentFlow: AppFlowState = .mainMenu
     @Published var navigationPath = NavigationPath()
     @Published var showActionOverlay: Bool = false
     @Published var showOperationResult: Bool = false
     @Published var showBaseOverlay: Bool = false
     
-    // Overlay state
     @Published var selectedPOI: PointOfInterest?
     @Published var overlayPosition: CGPoint = .zero
     @Published var currentOperationResult: OperationResult?
     
-    // MARK: - Core Managers
     private(set) var gameStateManager: GameStateManager?
     private(set) var gameSaveManager: GameSaveManager
     private(set) var mainMenuViewModel: MainMenuViewModel
     
-    // MARK: - ViewModels
     private var baseViewModel: BaseViewModel?
     private var gameSceneViewModel: GameSceneViewModel?
     private var actionOverlayViewModel: ActionOverlayViewModel?
     
-    // MARK: - Cancellables
     private var cancellables = Set<AnyCancellable>()
     
-    // MARK: - Initialization
     init() {
         self.gameSaveManager = GameSaveManager()
         self.mainMenuViewModel = MainMenuViewModel()
@@ -55,7 +47,6 @@ class AppCoordinator: ObservableObject {
     }
     
     private func setupBindings() {
-        // Listen for navigation requests from MainMenuViewModel
         mainMenuViewModel.navigationRequestPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] request in
@@ -64,7 +55,6 @@ class AppCoordinator: ObservableObject {
             .store(in: &cancellables)
     }
     
-    // MARK: - Navigation Request Handling
     private func handleNavigationRequest(_ request: NavigationRequest) {
         switch request {
         case .toGameMap:
@@ -88,19 +78,16 @@ class AppCoordinator: ObservableObject {
             let result = gameSaveManager.loadGame(from: recentSave)
             switch result {
             case .success(let gameState):
-                gameStateManager = GameStateManager(savedGameState: gameState)
-                recreateViewModels()
+                initializeGameState(GameStateManager(savedGameState: gameState))
                 navigateToGameMap()
             case .failure(let error):
                 mainMenuViewModel.showLoadError(error.localizedDescription)
             }
         } else {
-            // No save found, start new game
             handleStartNewGame()
         }
     }
     
-    // MARK: - Navigation Methods
     func navigateToMainMenu() {
         withAnimation {
             currentFlow = .mainMenu
@@ -148,7 +135,6 @@ class AppCoordinator: ObservableObject {
     }
     
     private func updateCurrentFlowFromPath() {
-        // Get the last item in navigation path to determine current flow
         if navigationPath.count >= 2 {
             currentFlow = .operationResult
         } else if navigationPath.count == 1 {
@@ -158,7 +144,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Base Overlay Management
     func showBaseManagement() {
         withAnimation(.easeInOut(duration: 0.3)) {
             showBaseOverlay = true
@@ -171,7 +156,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Game State Management
     private func ensureGameStateManager() {
         if gameStateManager == nil {
             startNewGame()
@@ -179,12 +163,23 @@ class AppCoordinator: ObservableObject {
     }
     
     func startNewGame() {
-        gameStateManager = GameStateManager()
-        mainMenuViewModel.updateGameState(gameStateManager)
-        recreateViewModels()
-        
-        // Auto-save new game
+        let newGameState = GameStateManager()
+        initializeGameState(newGameState)
         saveCurrentGame()
+    }
+    
+    private func initializeGameState(_ gameState: GameStateManager) {
+        gameStateManager = gameState
+        mainMenuViewModel.updateGameState(gameStateManager)
+        createViewModels()
+    }
+    
+    private func createViewModels() {
+        guard let gameManager = gameStateManager else { return }
+        
+        baseViewModel = BaseViewModel(gameStateManager: gameManager)
+        gameSceneViewModel = GameSceneViewModel(gameStateManager: gameManager)
+        actionOverlayViewModel = ActionOverlayViewModel(gameStateManager: gameManager)
     }
     
     func loadGame(from saveSlot: SaveSlot) -> Bool {
@@ -192,9 +187,7 @@ class AppCoordinator: ObservableObject {
         
         switch result {
         case .success(let gameState):
-            gameStateManager = GameStateManager(savedGameState: gameState)
-            mainMenuViewModel.updateGameState(gameStateManager)
-            recreateViewModels()
+            initializeGameState(GameStateManager(savedGameState: gameState))
             return true
             
         case .failure:
@@ -202,16 +195,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    private func recreateViewModels() {
-        guard let gameManager = gameStateManager else { return }
-        
-        // Recreate ViewModels with updated GameStateManager
-        baseViewModel = BaseViewModel(gameStateManager: gameManager)
-        gameSceneViewModel = GameSceneViewModel(gameStateManager: gameManager)
-        actionOverlayViewModel = ActionOverlayViewModel(gameStateManager: gameManager)
-    }
-    
-    // MARK: - ViewModel Access
     func getBaseViewModel() -> BaseViewModel {
         if baseViewModel == nil {
             ensureGameStateManager()
@@ -236,7 +219,6 @@ class AppCoordinator: ObservableObject {
         return actionOverlayViewModel!
     }
     
-    // MARK: - POI Interaction
     func handlePOISelected(_ poi: PointOfInterest, at position: CGPoint) {
         selectedPOI = poi
         overlayPosition = position
@@ -262,32 +244,23 @@ class AppCoordinator: ObservableObject {
         actionOverlayViewModel?.deselectPOI()
     }
     
-    // MARK: - Operation Handling
     func executeOperation(actionType: ActionType, targetPOI: PointOfInterest) {
         guard let gameManager = gameStateManager else { return }
         
         hideActionOverlay()
         
-        // Execute operation
         let result = gameManager.executeOperation(actionType: actionType, targetPOI: targetPOI)
         
-        // Handle result
         handleOperationResult(result)
-        
-        // Check win/lose conditions
         checkGameEndConditions()
-        
-        // Update ViewModels with new game state
-        refreshViewModels()
+        updateViewModelsData()
     }
     
     func handleOperationResult(_ result: OperationResult) {
         currentOperationResult = result
         
-        // Auto-save after operation
         saveCurrentGame()
         
-        // Show result
         withAnimation {
             showOperationResult = true
         }
@@ -300,15 +273,12 @@ class AppCoordinator: ObservableObject {
         currentOperationResult = nil
     }
     
-    // MARK: - ViewModel Refresh
-    private func refreshViewModels() {
+    private func updateViewModelsData() {
         baseViewModel?.refreshData()
-        gameSceneViewModel?.refreshMap()
-        // Update mainMenuViewModel with latest game state
+        gameSceneViewModel?.updateMapData()
         mainMenuViewModel.updateGameState(gameStateManager)
     }
     
-    // MARK: - Game End Conditions
     private func checkGameEndConditions() {
         guard let gameManager = gameStateManager else { return }
         
@@ -323,7 +293,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Save/Load Integration
     func saveCurrentGame() {
         guard let gameManager = gameStateManager else { return }
         
@@ -338,7 +307,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Overlay Management
     func hideAllOverlays() {
         showActionOverlay = false
         showOperationResult = false
@@ -348,7 +316,6 @@ class AppCoordinator: ObservableObject {
         actionOverlayViewModel?.reset()
     }
     
-    // MARK: - App Lifecycle
     func handleAppDidEnterBackground() {
         if let gameManager = gameStateManager, gameManager.isGameActive {
             gameManager.pauseGame()
@@ -362,7 +329,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Debug Support
     func resetToMainMenu() {
         gameStateManager = nil
         baseViewModel = nil
@@ -390,7 +356,6 @@ class AppCoordinator: ObservableObject {
         return info
     }
     
-    // MARK: - Public Interface for Views
     var isGameActive: Bool {
         return gameStateManager?.isGameActive ?? false
     }
@@ -404,7 +369,6 @@ class AppCoordinator: ObservableObject {
     }
 }
 
-// MARK: - Navigation Request Enum
 enum NavigationRequest {
     case toGameMap
     case toMainMenu
@@ -412,7 +376,6 @@ enum NavigationRequest {
     case continueGame
 }
 
-// MARK: - Notification Names
 extension Notification.Name {
     static let poiSelected = Notification.Name("poiSelected")
     static let poiDeselected = Notification.Name("poiDeselected")
