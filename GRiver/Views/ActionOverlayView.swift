@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Action Overlay View
 struct ActionOverlayView: View {
-    @StateObject private var viewModel = ActionOverlayViewModel()
+    @ObservedObject var viewModel: ActionOverlayViewModel
     
     let poi: PointOfInterest
     let position: CGPoint
@@ -23,7 +23,18 @@ struct ActionOverlayView: View {
                 .position(x: position.x, y: position.y)
         }
         .onAppear {
-            viewModel.selectPOI(poi)
+            setupViewModel()
+        }
+        .onDisappear {
+            viewModel.reset()
+        }
+    }
+    
+    // MARK: - Setup
+    private func setupViewModel() {
+        viewModel.selectPOI(poi)
+        viewModel.setOperationCallback { result in
+            onActionExecuted(result)
         }
     }
     
@@ -36,8 +47,10 @@ struct ActionOverlayView: View {
             
             // MARK: - Actions Section
             if viewModel.isAnalyzing {
-                ProgressView("Analyzing...")
+                ProgressView("Analyzing operations...")
                     .padding()
+            } else if !viewModel.hasValidGameState {
+                errorSection
             } else {
                 actionsSection
             }
@@ -46,10 +59,10 @@ struct ActionOverlayView: View {
             controlButtons
         }
         .padding(20)
-        .background(Color.white)
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 8)
-        .frame(maxWidth: 300)
+        .frame(maxWidth: 320)
         .confirmationDialog(
             viewModel.confirmationTitle,
             isPresented: $viewModel.showExecutionConfirm,
@@ -64,41 +77,108 @@ struct ActionOverlayView: View {
         } message: {
             Text(viewModel.confirmationMessage)
         }
-        .alert("Operation Result", isPresented: $viewModel.showResult) {
-            Button("OK") {
-                viewModel.hideResult()
-                if let result = viewModel.executionResult {
-                    onActionExecuted(result)
-                }
-            }
-        } message: {
-            if let result = viewModel.executionResult {
-                Text(result.outcomeMessage)
-            }
-        }
     }
     
     // MARK: - POI Info Header
     private var poiInfoHeader: some View {
-        VStack(spacing: 4) {
-            Text(poi.type.displayName)
-                .font(.headline)
-                .foregroundColor(.primary)
+        VStack(spacing: 6) {
+            HStack {
+                Text(poi.type.displayName)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text(poi.status.displayName)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(poiStatusColor.opacity(0.2))
+                    .foregroundColor(poiStatusColor)
+                    .cornerRadius(4)
+            }
             
-            Text(viewModel.targetInfo)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Text("Status: \(poi.status.displayName)")
-                .font(.caption)
-                .foregroundColor(poi.isOperational ? .green : .red)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text("Defense:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("\(poi.totalDefense)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                
+                HStack {
+                    Text("Units:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("\(poi.currentUnits)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                
+                if poi.defenseBonus > 0 {
+                    HStack {
+                        Text("Alert Bonus:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text("+\(poi.defenseBonus)")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
         }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    private var poiStatusColor: Color {
+        switch poi.status {
+        case .active: return .green
+        case .captured: return .blue
+        case .destroyed: return .red
+        }
+    }
+    
+    // MARK: - Error Section
+    private var errorSection: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.title2)
+                .foregroundColor(.orange)
+            
+            Text("Unable to perform operations")
+                .font(.subheadline)
+                .fontWeight(.medium)
+            
+            if let error = viewModel.gameStateError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
     }
     
     // MARK: - Actions Section
     private var actionsSection: some View {
-        VStack(spacing: 8) {
-            Text("Available Actions")
+        VStack(spacing: 12) {
+            Text("Available Operations")
                 .font(.subheadline)
                 .fontWeight(.medium)
             
@@ -111,13 +191,13 @@ struct ActionOverlayView: View {
                 }
             }
             
-            // Best action recommendation
-            if let bestAction = viewModel.getBestAction() {
-                Text("Recommended: \(bestAction.displayName)")
-                    .font(.caption)
-                    .foregroundColor(.blue)
-                    .padding(.top, 4)
+            // Strategic recommendations
+            if !viewModel.getRecommendedActions().isEmpty {
+                recommendationsSection
             }
+            
+            // Resource summary
+            resourceSummarySection
         }
     }
     
@@ -129,49 +209,128 @@ struct ActionOverlayView: View {
             }
         }) {
             VStack(spacing: 4) {
-                Text(actionType.displayName)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                HStack(spacing: 4) {
+                    Text(actionType.icon)
+                        .font(.caption)
+                    
+                    Text(actionType.displayName)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
                 
                 let percentage = viewModel.getSuccessPercentage(for: actionType)
                 Text("\(percentage)%")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .fontWeight(.bold)
+                    .foregroundColor(successProbabilityColor(percentage))
+                
+                // Risk indicator
+                let riskColor = riskIndicatorColor(for: actionType)
+                Circle()
+                    .fill(riskColor)
+                    .frame(width: 6, height: 6)
             }
-            .frame(height: 44)
+            .frame(height: 60)
             .frame(maxWidth: .infinity)
             .background(backgroundColorForAction(actionType))
-            .foregroundColor(textColorForAction(actionType))
-            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(borderColorForAction(actionType), lineWidth: 1)
+            )
+            .cornerRadius(8)
         }
         .disabled(!viewModel.canPerformAction(actionType) || viewModel.isExecuting)
+    }
+    
+    private func successProbabilityColor(_ percentage: Int) -> Color {
+        if percentage >= 70 {
+            return .green
+        } else if percentage >= 50 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+    
+    private func riskIndicatorColor(for actionType: ActionType) -> Color {
+        let statusColor = viewModel.getActionStatusColor(actionType)
+        switch statusColor {
+        case .good: return .green
+        case .caution: return .yellow
+        case .dangerous: return .red
+        case .unavailable: return .gray
+        }
     }
     
     private func backgroundColorForAction(_ actionType: ActionType) -> Color {
         let statusColor = viewModel.getActionStatusColor(actionType)
         switch statusColor {
-        case .good:
-            return .green.opacity(0.2)
-        case .caution:
-            return .yellow.opacity(0.2)
-        case .dangerous:
-            return .orange.opacity(0.2)
-        case .unavailable:
-            return .gray.opacity(0.1)
+        case .good: return .green.opacity(0.1)
+        case .caution: return .yellow.opacity(0.1)
+        case .dangerous: return .orange.opacity(0.1)
+        case .unavailable: return .gray.opacity(0.05)
         }
     }
     
-    private func textColorForAction(_ actionType: ActionType) -> Color {
+    private func borderColorForAction(_ actionType: ActionType) -> Color {
         let statusColor = viewModel.getActionStatusColor(actionType)
         switch statusColor {
-        case .good:
-            return .green
-        case .caution:
-            return .orange
-        case .dangerous:
-            return .red
-        case .unavailable:
-            return .gray
+        case .good: return .green.opacity(0.3)
+        case .caution: return .yellow.opacity(0.3)
+        case .dangerous: return .orange.opacity(0.3)
+        case .unavailable: return .gray.opacity(0.2)
+        }
+    }
+    
+    // MARK: - Recommendations Section
+    private var recommendationsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Recommended:")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.blue)
+            
+            let recommended = viewModel.getRecommendedActions()
+            if let best = recommended.first {
+                Text(best.displayName)
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(6)
+    }
+    
+    // MARK: - Resource Summary Section
+    private var resourceSummarySection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Current Resources:")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+            
+            HStack(spacing: 12) {
+                resourceIndicator("💰", viewModel.playerResources.money)
+                resourceIndicator("🔫", viewModel.playerResources.ammo)
+                resourceIndicator("🍖", viewModel.playerResources.food)
+                resourceIndicator("👤", viewModel.playerResources.units)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(6)
+    }
+    
+    private func resourceIndicator(_ icon: String, _ amount: Int) -> some View {
+        HStack(spacing: 2) {
+            Text(icon)
+                .font(.caption2)
+            Text("\(amount)")
+                .font(.caption2)
+                .fontWeight(.medium)
         }
     }
     
@@ -187,91 +346,65 @@ struct ActionOverlayView: View {
             Spacer()
             
             if viewModel.isExecuting {
-                ProgressView()
-                    .scaleEffect(0.8)
-            }
-            
-            // Action costs info
-            if let selectedAction = viewModel.selectedAction {
-                let cost = viewModel.getActionCost(selectedAction)
-                if !cost.isEmpty {
-                    VStack(alignment: .trailing) {
-                        Text("Cost:")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
-                        HStack(spacing: 4) {
-                            if cost.ammo > 0 {
-                                Text("\(cost.ammo)🔫")
-                            }
-                            if cost.food > 0 {
-                                Text("\(cost.food)🍖")
-                            }
-                            if cost.units > 0 {
-                                Text("\(cost.units)👤")
-                            }
-                        }
-                        .font(.caption2)
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    
+                    Text("Executing...")
+                        .font(.caption)
                         .foregroundColor(.secondary)
-                    }
                 }
+            } else {
+                Text("Tap operation to execute")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
     }
 }
 
-// MARK: - Container View for Integration
+// MARK: - Coordinator Integration Wrapper
 struct ActionOverlayContainer: View {
-    @State private var selectedPOI: PointOfInterest?
-    @State private var overlayPosition: CGPoint = .zero
-    @State private var showOverlay: Bool = false
-    
-    let onPOISelected: (PointOfInterest, CGPoint) -> Void
-    let onActionExecuted: (OperationResult) -> Void
+    @ObservedObject var coordinator: AppCoordinator
     
     var body: some View {
-        ZStack {
-            Color.clear
-            
-            if showOverlay, let poi = selectedPOI {
+        Group {
+            if coordinator.showActionOverlay,
+               let poi = coordinator.selectedPOI {
                 ActionOverlayView(
+                    viewModel: coordinator.getActionOverlayViewModel(),
                     poi: poi,
-                    position: overlayPosition,
+                    position: coordinator.overlayPosition,
                     onCancel: {
-                        hideOverlay()
+                        coordinator.hideActionOverlay()
                     },
                     onActionExecuted: { result in
-                        onActionExecuted(result)
-                        hideOverlay()
+                        coordinator.handleOperationResult(result)
                     }
                 )
             }
         }
     }
-    
-    func showOverlay(for poi: PointOfInterest, at position: CGPoint) {
-        selectedPOI = poi
-        overlayPosition = position
-        showOverlay = true
-    }
-    
-    func hideOverlay() {
-        showOverlay = false
-        selectedPOI = nil
-    }
 }
 
 // MARK: - Preview
 #Preview {
-    ZStack {
+    @StateObject var testViewModel = ActionOverlayViewModel()
+    
+    return ZStack {
         Color.gray.opacity(0.3)
             .ignoresSafeArea()
         
         ActionOverlayView(
+            viewModel: testViewModel,
             poi: PointOfInterest(type: .base, position: CGPoint(x: 100, y: 100)),
             position: CGPoint(x: 200, y: 300),
             onCancel: {},
             onActionExecuted: { _ in }
         )
+    }
+    .onAppear {
+        // Setup test data
+        testViewModel.setGameStateManager(GameStateManager())
     }
 }

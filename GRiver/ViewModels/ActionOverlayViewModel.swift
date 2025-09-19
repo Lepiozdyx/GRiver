@@ -21,6 +21,9 @@ class ActionOverlayViewModel: ObservableObject {
     private var gameStateManager: GameStateManager?
     private let combatCalculator = CombatCalculator.self
     
+    // MARK: - Operation Callback
+    var onOperationExecuted: ((OperationResult) -> Void)?
+    
     // MARK: - Computed Properties
     var isVisible: Bool {
         return selectedPOI != nil
@@ -51,18 +54,34 @@ class ActionOverlayViewModel: ObservableObject {
     
     // MARK: - Initialization
     init() {
-        // Empty init for standalone usage
+        // Initialize with empty state
     }
     
     convenience init(gameStateManager: GameStateManager) {
         self.init()
-        self.gameStateManager = gameStateManager
+        setGameStateManager(gameStateManager)
+    }
+    
+    // MARK: - GameStateManager Management
+    func setGameStateManager(_ manager: GameStateManager) {
+        self.gameStateManager = manager
         refreshPlayerResources()
+    }
+    
+    func setOperationCallback(_ callback: @escaping (OperationResult) -> Void) {
+        self.onOperationExecuted = callback
     }
     
     // MARK: - POI Selection
     func selectPOI(_ poi: PointOfInterest) {
-        selectedPOI = poi
+        // Get the latest POI data from game state if available
+        if let gameManager = gameStateManager,
+           let currentPOI = gameManager.getPOI(withID: poi.id) {
+            selectedPOI = currentPOI
+        } else {
+            selectedPOI = poi
+        }
+        
         refreshPlayerResources()
         analyzeAllActions()
     }
@@ -79,6 +98,8 @@ class ActionOverlayViewModel: ObservableObject {
     private func refreshPlayerResources() {
         if let gameManager = gameStateManager {
             playerResources = gameManager.currentResources
+        } else {
+            playerResources = Resource.zero
         }
     }
     
@@ -139,8 +160,14 @@ class ActionOverlayViewModel: ObservableObject {
     // MARK: - Action Execution
     func executeSelectedAction() {
         guard let actionType = selectedAction,
-              let poi = selectedPOI,
-              let gameManager = gameStateManager else { return }
+              let poi = selectedPOI else { return }
+        
+        // Check if we have a game state manager
+        guard let gameManager = gameStateManager else {
+            print("Error: No game state manager available for operation execution")
+            hideExecutionConfirm()
+            return
+        }
         
         hideExecutionConfirm()
         isExecuting = true
@@ -153,7 +180,14 @@ class ActionOverlayViewModel: ObservableObject {
         refreshPlayerResources()
         
         isExecuting = false
-        showResult = true
+        
+        // Notify callback if available (for coordination with AppCoordinator)
+        if let callback = onOperationExecuted {
+            callback(result)
+        } else {
+            // Fallback to showing result locally
+            showResult = true
+        }
         
         // Update POI if it was captured or destroyed
         if result.success {
@@ -165,7 +199,9 @@ class ActionOverlayViewModel: ObservableObject {
                 }
             default:
                 // For raid and robbery, POI stays operational but might be weakened
-                break
+                if let updatedPOI = gameManager.getPOI(withID: poi.id) {
+                    selectedPOI = updatedPOI
+                }
             }
         }
         
@@ -285,12 +321,49 @@ class ActionOverlayViewModel: ObservableObject {
         return message
     }
     
+    // MARK: - Game State Validation
+    var hasValidGameState: Bool {
+        return gameStateManager != nil
+    }
+    
+    var gameStateError: String? {
+        if gameStateManager == nil {
+            return "No game state available"
+        }
+        
+        if selectedPOI == nil {
+            return "No target selected"
+        }
+        
+        if playerResources.isEmpty {
+            return "No resources available"
+        }
+        
+        return nil
+    }
+    
     // MARK: - Cleanup
     func reset() {
         deselectPOI()
         actionAnalyses.removeAll()
         isAnalyzing = false
         isExecuting = false
+        onOperationExecuted = nil
+    }
+    
+    // MARK: - Debug Support
+    var debugInfo: String {
+        var info = "ActionOverlay Debug:\n"
+        info += "Has GameState: \(hasValidGameState)\n"
+        info += "Selected POI: \(selectedPOI?.type.displayName ?? "None")\n"
+        info += "Available Actions: \(availableActions.count)\n"
+        info += "Is Executing: \(isExecuting)\n"
+        
+        if let error = gameStateError {
+            info += "Error: \(error)\n"
+        }
+        
+        return info
     }
 }
 

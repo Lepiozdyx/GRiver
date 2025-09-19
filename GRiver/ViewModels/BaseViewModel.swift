@@ -24,6 +24,7 @@ class BaseViewModel: ObservableObject {
     let baseManager: BaseManager
     private let economyManager = EconomyManager.self
     private var gameStateManager: GameStateManager?
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Validation States
     @Published var canUpgradeStorage: Bool = false
@@ -40,17 +41,33 @@ class BaseViewModel: ObservableObject {
     
     convenience init(gameStateManager: GameStateManager) {
         self.init()
-        self.gameStateManager = gameStateManager
-        self.playerResources = gameStateManager.currentResources
+        setGameStateManager(gameStateManager)
+    }
+    
+    // MARK: - GameStateManager Integration
+    func setGameStateManager(_ manager: GameStateManager) {
+        self.gameStateManager = manager
         refreshData()
     }
     
     // MARK: - Data Refresh
     func refreshData() {
-        if let gameManager = gameStateManager {
-            playerResources = gameManager.currentResources
+        guard let gameManager = gameStateManager else {
+            // Fallback to default state
+            playerResources = Resource.startingResources
+            playerBase = PlayerBase()
+            updateValidationStates()
+            return
         }
+        
+        // Sync resources from game state
+        playerResources = gameManager.currentResources
+        
+        // Note: playerBase is managed locally by baseManager
+        // It doesn't need to sync from GameStateManager as the base
+        // upgrades are handled through this ViewModel
         playerBase = baseManager.exportBase()
+        
         updateValidationStates()
     }
     
@@ -88,14 +105,28 @@ class BaseViewModel: ObservableObject {
             return
         }
         
-        var tempResources = playerResources
+        guard let gameManager = gameStateManager else {
+            showError("Upgrade Failed", "Game state not available")
+            return
+        }
         
-        if baseManager.upgradeBuilding(.storage, with: &tempResources) {
-            updateResources(tempResources)
-            showSuccess("Storage Upgraded", "Storage capacity increased!")
-            refreshData()
+        let cost = baseManager.getUpgradeCost(for: .storage)
+        
+        // Spend resources through game manager
+        if gameManager.spendResources(cost) {
+            // Upgrade building through base manager
+            if baseManager.upgradeBuilding(.storage, with: &playerResources) {
+                // Sync resources back from game manager
+                playerResources = gameManager.currentResources
+                showSuccess("Storage Upgraded", "Storage capacity increased!")
+                refreshData()
+            } else {
+                // Refund resources if upgrade failed
+                gameManager.addResources(cost)
+                showError("Upgrade Failed", "Unable to upgrade storage")
+            }
         } else {
-            showError("Upgrade Failed", "Unable to upgrade storage")
+            showError("Upgrade Failed", "Insufficient resources")
         }
     }
     
@@ -105,14 +136,28 @@ class BaseViewModel: ObservableObject {
             return
         }
         
-        var tempResources = playerResources
+        guard let gameManager = gameStateManager else {
+            showError("Upgrade Failed", "Game state not available")
+            return
+        }
         
-        if baseManager.upgradeBuilding(.barracks, with: &tempResources) {
-            updateResources(tempResources)
-            showSuccess("Barracks Upgraded", "Unit capacity increased!")
-            refreshData()
+        let cost = baseManager.getUpgradeCost(for: .barracks)
+        
+        // Spend resources through game manager
+        if gameManager.spendResources(cost) {
+            // Upgrade building through base manager
+            if baseManager.upgradeBuilding(.barracks, with: &playerResources) {
+                // Sync resources back from game manager
+                playerResources = gameManager.currentResources
+                showSuccess("Barracks Upgraded", "Unit capacity increased!")
+                refreshData()
+            } else {
+                // Refund resources if upgrade failed
+                gameManager.addResources(cost)
+                showError("Upgrade Failed", "Unable to upgrade barracks")
+            }
         } else {
-            showError("Upgrade Failed", "Unable to upgrade barracks")
+            showError("Upgrade Failed", "Insufficient resources")
         }
     }
     
@@ -128,10 +173,15 @@ class BaseViewModel: ObservableObject {
             return
         }
         
-        var tempResources = playerResources
+        guard let gameManager = gameStateManager else {
+            showError("Recruitment Failed", "Game state not available")
+            return
+        }
         
-        if baseManager.recruitUnits(unitsToBuy, currentUnits: tempResources.units, resources: &tempResources) {
-            updateResources(tempResources)
+        // Use game manager's recruitment method
+        if gameManager.recruitUnits(unitsToBuy) {
+            // Sync resources from game manager
+            playerResources = gameManager.currentResources
             showSuccess("Units Recruited", "Successfully recruited \(unitsToBuy) units")
             unitsToBuy = 1 // Reset to default
             refreshData()
@@ -152,10 +202,15 @@ class BaseViewModel: ObservableObject {
             return
         }
         
-        var tempResources = playerResources
+        guard let gameManager = gameStateManager else {
+            showError("Purchase Failed", "Game state not available")
+            return
+        }
         
-        if baseManager.purchaseSupplies(ammo: ammoToBuy, food: foodToBuy, resources: &tempResources) {
-            updateResources(tempResources)
+        // Use game manager's purchase method
+        if gameManager.purchaseSupplies(ammo: ammoToBuy, food: foodToBuy) {
+            // Sync resources from game manager
+            playerResources = gameManager.currentResources
             showSuccess("Supplies Purchased", "Successfully bought \(ammoToBuy) ammo and \(foodToBuy) food")
             ammoToBuy = 0 // Reset
             foodToBuy = 0 // Reset
@@ -215,13 +270,6 @@ class BaseViewModel: ObservableObject {
     func buyMaxFood() {
         foodToBuy = getMaxAffordableFood()
         updateValidationStates()
-    }
-    
-    // MARK: - Resource Management
-    private func updateResources(_ newResources: Resource) {
-        let validatedResources = baseManager.validateResourceLimits(newResources)
-        playerResources = validatedResources
-        gameStateManager?.importGameState(GameState())
     }
     
     // MARK: - Base Status
@@ -303,6 +351,32 @@ class BaseViewModel: ObservableObject {
         }
         
         return nil
+    }
+    
+    // MARK: - Game State Synchronization
+    func syncWithGameState() {
+        guard let gameManager = gameStateManager else { return }
+        
+        // Force refresh from game state
+        playerResources = gameManager.currentResources
+        updateValidationStates()
+    }
+    
+    // MARK: - Debug Support
+    var debugInfo: String {
+        var info = "BaseViewModel Debug:\n"
+        info += "Has GameManager: \(gameStateManager != nil)\n"
+        info += "Resources: \(playerResources.totalValue) total value\n"
+        info += "Storage Level: \(baseManager.storageLevel)\n"
+        info += "Barracks Level: \(baseManager.barracksLevel)\n"
+        info += "Can Leave Base: \(canLeaveBase)\n"
+        
+        return info
+    }
+    
+    // MARK: - Cleanup
+    deinit {
+        cancellables.removeAll()
     }
 }
 

@@ -20,25 +20,10 @@ enum NavigationDestination: String, CaseIterable {
     }
 }
 
-// MARK: - Game Launch Mode
-enum GameLaunchMode: String {
-    case newGame = "newGame"
-    case continueGame = "continueGame"
-    
-    var displayName: String {
-        switch self {
-        case .newGame: return "New Game"
-        case .continueGame: return "Continue Game"
-        }
-    }
-}
-
 // MARK: - Main Menu View Model
 class MainMenuViewModel: ObservableObject {
     
     // MARK: - Published Properties
-    @Published var currentDestination: NavigationDestination = .mainMenu
-    @Published var gameStateManager: GameStateManager?
     @Published var hasSavedGame: Bool = false
     @Published var savedGameInfo: String = ""
     
@@ -53,8 +38,15 @@ class MainMenuViewModel: ObservableObject {
     @Published var isGameActive: Bool = false
     @Published var gameStatus: GameStatus = .playing
     
+    // MARK: - Navigation Publisher
+    private let navigationSubject = PassthroughSubject<NavigationRequest, Never>()
+    var navigationRequestPublisher: AnyPublisher<NavigationRequest, Never> {
+        navigationSubject.eraseToAnyPublisher()
+    }
+    
     // MARK: - Dependencies
     private let gameSaveManager: GameSaveManager
+    private var gameStateManager: GameStateManager?
     
     // MARK: - Initialization
     init() {
@@ -62,63 +54,61 @@ class MainMenuViewModel: ObservableObject {
         checkForSavedGame()
     }
     
+    // MARK: - Game State Management
+    func updateGameState(_ gameManager: GameStateManager?) {
+        self.gameStateManager = gameManager
+        updateGameStatus()
+    }
+    
+    private func updateGameStatus() {
+        if let manager = gameStateManager {
+            gameStatus = manager.currentStatus
+            isGameActive = manager.isGameActive
+        } else {
+            gameStatus = .playing
+            isGameActive = false
+        }
+    }
+    
     // MARK: - Navigation Methods
-    func navigateToGameMap() {
-        ensureGameStateExists()
-        currentDestination = .gameMap
-    }
-    
-    func navigateToPlayerBase() {
-        ensureGameStateExists()
-        currentDestination = .playerBase
-    }
-    
-    func navigateToMainMenu() {
-        currentDestination = .mainMenu
-    }
-    
-    func navigateToOperationResult() {
-        currentDestination = .operationResult
-    }
-    
-    func navigateToGameOver() {
-        currentDestination = .gameOver
-    }
-    
-    private func ensureGameStateExists() {
-        if gameStateManager == nil {
-            startNewGame()
+    func handlePlayAction() {
+        if isGameActive && gameStatus == .paused {
+            // Resume existing game
+            gameStateManager?.resumeGame()
+            updateGameStatus()
+            navigationSubject.send(.toGameMap)
+        } else if hasSavedGame && !isGameActive {
+            // Continue from save
+            navigationSubject.send(.continueGame)
+        } else {
+            // Start new game
+            if isGameActive && gameStateManager?.currentStatus == .playing {
+                showNewGameConfirm = true
+            } else {
+                navigationSubject.send(.startNewGame)
+            }
         }
     }
     
-    // MARK: - Game Management
-    func startNewGame() {
-        if isGameActive && gameStateManager?.currentStatus == .playing {
-            showNewGameConfirm = true
-            return
+    func handleBaseAction() {
+        if !isGameActive {
+            // Need to start/load game first
+            if hasSavedGame {
+                navigationSubject.send(.continueGame)
+            } else {
+                navigationSubject.send(.startNewGame)
+            }
+        } else {
+            navigationSubject.send(.toPlayerBase)
         }
-        
-        confirmNewGame()
     }
     
     func confirmNewGame() {
-        gameStateManager = GameStateManager()
-        isGameActive = true
-        gameStatus = .playing
         showNewGameConfirm = false
-        
-        // Auto-save new game
-        saveCurrentGame()
+        navigationSubject.send(.startNewGame)
     }
     
-    func continueGame() {
-        if hasSavedGame {
-            loadSavedGame()
-        } else {
-            startNewGame()
-        }
-    }
-    
+    // MARK: - Game Management
     func pauseGame() {
         gameStateManager?.pauseGame()
         updateGameStatus()
@@ -130,17 +120,10 @@ class MainMenuViewModel: ObservableObject {
     }
     
     func resetGame() {
-        gameStateManager?.resetGame()
+        gameStateManager = nil
         isGameActive = false
         gameStatus = .playing
         checkForSavedGame()
-    }
-    
-    private func updateGameStatus() {
-        if let manager = gameStateManager {
-            gameStatus = manager.currentStatus
-            isGameActive = manager.isGameActive
-        }
     }
     
     // MARK: - Save/Load Management
@@ -150,29 +133,6 @@ class MainMenuViewModel: ObservableObject {
             savedGameInfo = recentSave.displayInfo
         } else {
             savedGameInfo = "No saved games"
-        }
-    }
-    
-    private func loadSavedGame() {
-        guard let recentSave = gameSaveManager.mostRecentSave else {
-            alertTitle = "Load Failed"
-            alertMessage = "No saved game found"
-            showLoadError = true
-            return
-        }
-        
-        let result = gameSaveManager.loadGame(from: recentSave)
-        
-        switch result {
-        case .success(let gameState):
-            gameStateManager = GameStateManager(savedGameState: gameState)
-            isGameActive = true
-            updateGameStatus()
-            
-        case .failure(let error):
-            alertTitle = "Load Failed"
-            alertMessage = error.localizedDescription
-            showLoadError = true
         }
     }
     
@@ -188,9 +148,7 @@ class MainMenuViewModel: ObservableObject {
             print("Game saved: \(saveSlot.displayInfo)")
             
         case .failure(let error):
-            alertTitle = "Save Failed"
-            alertMessage = "Failed to save: \(error.localizedDescription)"
-            showLoadError = true
+            showLoadError(error.localizedDescription)
         }
     }
     
@@ -232,32 +190,6 @@ class MainMenuViewModel: ObservableObject {
     }
     
     // MARK: - Menu Actions
-    func handlePlayAction() {
-        if isGameActive && gameStatus == .paused {
-            resumeGame()
-            navigateToGameMap()
-        } else if hasSavedGame && !isGameActive {
-            continueGame()
-            if isGameActive {
-                navigateToGameMap()
-            }
-        } else {
-            startNewGame()
-            if isGameActive {
-                navigateToGameMap()
-            }
-        }
-    }
-    
-    func handleBaseAction() {
-        if !isGameActive {
-            startNewGame()
-        }
-        if isGameActive {
-            navigateToPlayerBase()
-        }
-    }
-    
     func handleExitAction() {
         if isGameActive && gameStatus == .playing {
             // Auto-save before exit
@@ -269,7 +201,7 @@ class MainMenuViewModel: ObservableObject {
     func confirmExit() {
         showExitConfirm = false
         // In a real app, this would exit the app
-        // For now, just reset to main menu
+        // For now, just pause the game
         pauseGame()
     }
     
@@ -280,6 +212,12 @@ class MainMenuViewModel: ObservableObject {
         showExitConfirm = false
         alertMessage = ""
         alertTitle = "Alert"
+    }
+    
+    func showLoadError(_ message: String) {
+        alertTitle = "Error"
+        alertMessage = message
+        showLoadError = true
     }
     
     // MARK: - Game State Access
@@ -297,25 +235,26 @@ class MainMenuViewModel: ObservableObject {
     
     // MARK: - Development/Debug Support
     func createTestGameState() {
-        gameStateManager = GameStateManager()
+        let testGameManager = GameStateManager()
         
         // Add some test resources
-        gameStateManager?.addResources(Resource(money: 1000, ammo: 50, food: 100, units: 10))
+        testGameManager.addResources(Resource(money: 1000, ammo: 50, food: 100, units: 10))
         
-        isGameActive = true
-        gameStatus = .playing
+        updateGameState(testGameManager)
     }
     
     func simulateGameProgress() {
-        guard let gameManager = gameStateManager else {
+        if gameStateManager == nil {
             createTestGameState()
-            return
         }
+        
+        guard let gameManager = gameStateManager else { return }
         
         // Simulate some game progress for testing
         gameManager.increaseAlert(by: 0.3)
         gameManager.addResources(Resource(money: 500, ammo: 20, food: 30, units: 5))
         updateGameStatus()
+        saveCurrentGame()
         checkForSavedGame()
     }
     
@@ -335,34 +274,50 @@ class MainMenuViewModel: ObservableObject {
         """
     }
     
-    // MARK: - Navigation State
-    var navigationPath: [NavigationDestination] {
-        switch currentDestination {
-        case .mainMenu:
-            return [.mainMenu]
-        case .gameMap:
-            return [.mainMenu, .gameMap]
-        case .playerBase:
-            return [.mainMenu, .playerBase]
-        case .operationResult:
-            return [.mainMenu, .gameMap, .operationResult]
-        case .gameOver:
-            return [.mainMenu, .gameMap, .gameOver]
-        }
+    // MARK: - Deprecated Navigation Methods (kept for compatibility)
+    @available(*, deprecated, message: "Use navigation publisher instead")
+    func navigateToGameMap() {
+        navigationSubject.send(.toGameMap)
     }
     
-    func canNavigateBack() -> Bool {
-        return currentDestination != .mainMenu
+    @available(*, deprecated, message: "Use navigation publisher instead")
+    func navigateToPlayerBase() {
+        navigationSubject.send(.toPlayerBase)
     }
     
+    @available(*, deprecated, message: "Use navigation publisher instead")
+    func navigateToMainMenu() {
+        navigationSubject.send(.toMainMenu)
+    }
+    
+    @available(*, deprecated, message: "Use navigation publisher instead")
+    func navigateToOperationResult() {
+        // Operation results are handled by overlays now
+    }
+    
+    @available(*, deprecated, message: "Use navigation publisher instead")
+    func navigateToGameOver() {
+        // Game over is handled automatically by coordinator
+    }
+    
+    @available(*, deprecated, message: "Use navigation publisher instead")
     func navigateBack() {
-        switch currentDestination {
-        case .mainMenu:
-            break
-        case .gameMap, .playerBase:
-            navigateToMainMenu()
-        case .operationResult, .gameOver:
-            navigateToGameMap()
-        }
+        // Back navigation is handled by coordinator
+    }
+    
+    // MARK: - Legacy Properties (kept for compatibility)
+    @available(*, deprecated, message: "Navigation is handled by AppCoordinator")
+    var currentDestination: NavigationDestination {
+        return .mainMenu
+    }
+    
+    @available(*, deprecated, message: "Navigation is handled by AppCoordinator")
+    var navigationPath: [NavigationDestination] {
+        return [.mainMenu]
+    }
+    
+    @available(*, deprecated, message: "Navigation is handled by AppCoordinator")
+    func canNavigateBack() -> Bool {
+        return false
     }
 }

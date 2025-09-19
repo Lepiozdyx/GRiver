@@ -19,6 +19,7 @@ struct ContentView: View {
                 if coordinator.showActionOverlay,
                    let poi = coordinator.selectedPOI {
                     ActionOverlayView(
+                        viewModel: coordinator.getActionOverlayViewModel(),
                         poi: poi,
                         position: coordinator.overlayPosition,
                         onCancel: {
@@ -52,6 +53,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             coordinator.handleAppWillEnterForeground()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .requestActionOverlay)) { notification in
+            handleActionOverlayRequest(notification)
+        }
     }
     
     // MARK: - Current View
@@ -66,17 +70,49 @@ struct ContentView: View {
                 }
             
         case .gameMap:
-            GameMapIntegratedView()
-                .environmentObject(coordinator)
+            GameMapView()
+                .environmentObject(coordinator.getGameSceneViewModel())
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Menu") {
+                            coordinator.navigateToMainMenu()
+                        }
+                        .foregroundColor(.white)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Base") {
+                            coordinator.navigateToPlayerBase()
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
             
         case .playerBase:
-            PlayerBaseIntegratedView()
-                .environmentObject(coordinator)
+            PlayerBaseView()
+                .environmentObject(coordinator.getBaseViewModel())
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Back") {
+                            coordinator.navigateBack()
+                        }
+                        .foregroundColor(.white)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Map") {
+                            coordinator.navigateToGameMap()
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
             
         case .operationResult:
             // This state is handled by overlay, fallback to game map
-            GameMapIntegratedView()
-                .environmentObject(coordinator)
+            GameMapView()
+                .environmentObject(coordinator.getGameSceneViewModel())
             
         case .gameOver:
             GameOverView()
@@ -93,75 +129,67 @@ struct ContentView: View {
                 .environmentObject(coordinator.mainMenuViewModel)
             
         case .gameMap:
-            GameMapIntegratedView()
-                .environmentObject(coordinator)
+            GameMapView()
+                .environmentObject(coordinator.getGameSceneViewModel())
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Menu") {
+                            coordinator.navigateToMainMenu()
+                        }
+                        .foregroundColor(.white)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Base") {
+                            coordinator.navigateToPlayerBase()
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
             
         case .playerBase:
-            PlayerBaseIntegratedView()
-                .environmentObject(coordinator)
+            PlayerBaseView()
+                .environmentObject(coordinator.getBaseViewModel())
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Back") {
+                            coordinator.navigateBack()
+                        }
+                        .foregroundColor(.white)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Map") {
+                            coordinator.navigateToGameMap()
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
             
         case .operationResult:
             // Handled by overlay, show game map
-            GameMapIntegratedView()
-                .environmentObject(coordinator)
+            GameMapView()
+                .environmentObject(coordinator.getGameSceneViewModel())
             
         case .gameOver:
             GameOverView()
                 .environmentObject(coordinator)
         }
     }
-}
-
-// MARK: - Integrated Views
-struct GameMapIntegratedView: View {
-    @EnvironmentObject var coordinator: AppCoordinator
     
-    var body: some View {
-        GameMapView()
-            .environmentObject(coordinator.getGameSceneViewModel())
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Menu") {
-                        coordinator.navigateToMainMenu()
-                    }
-                    .foregroundColor(.white)
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Base") {
-                        coordinator.navigateToPlayerBase()
-                    }
-                    .foregroundColor(.white)
-                }
-            }
+    // MARK: - Action Overlay Request Handler
+    private func handleActionOverlayRequest(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let poi = userInfo["poi"] as? PointOfInterest,
+              let position = userInfo["position"] as? CGPoint else { return }
+        
+        coordinator.handlePOISelected(poi, at: position)
     }
 }
 
-struct PlayerBaseIntegratedView: View {
-    @EnvironmentObject var coordinator: AppCoordinator
-    
-    var body: some View {
-        PlayerBaseView()
-            .environmentObject(coordinator.getBaseViewModel())
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back") {
-                        coordinator.navigateBack()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Map") {
-                        coordinator.navigateToGameMap()
-                    }
-                }
-            }
-    }
-}
-
-// MARK: - Game Over View (Placeholder)
+// MARK: - Game Over View
 struct GameOverView: View {
     @EnvironmentObject var coordinator: AppCoordinator
     
@@ -183,20 +211,7 @@ struct GameOverView: View {
             
             // Game Statistics
             if let gameState = coordinator.currentGameState {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Game Statistics")
-                        .font(.headline)
-                    
-                    Text("Operations Performed: \(gameState.statistics.operationsPerformed)")
-                    Text("Success Rate: \(Int(gameState.statistics.successRate * 100))%")
-                    Text("POIs Captured: \(gameState.statistics.poisCaptured)")
-                    Text("POIs Destroyed: \(gameState.statistics.poisDestroyed)")
-                }
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
+                gameStatisticsSection(gameState)
             }
             
             // Action Buttons
@@ -212,12 +227,65 @@ struct GameOverView: View {
                     coordinator.navigateToMainMenu()
                 }
                 .buttonStyle(.bordered)
+                
+                // Debug button for testing
+                Button("Reset All") {
+                    coordinator.resetToMainMenu()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .foregroundColor(.secondary)
             }
             
             Spacer()
         }
         .padding()
         .navigationBarBackButtonHidden(true)
+    }
+    
+    private func gameStatisticsSection(_ gameState: GameState) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Mission Statistics")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 8) {
+                statCard("Operations", "\(gameState.statistics.operationsPerformed)")
+                statCard("Success Rate", "\(Int(gameState.statistics.successRate * 100))%")
+                statCard("POIs Captured", "\(gameState.statistics.poisCaptured)")
+                statCard("POIs Destroyed", "\(gameState.statistics.poisDestroyed)")
+            }
+            
+            // Final game progress
+            let progress = Int(gameState.completionPercentage * 100)
+            Text("Mission Progress: \(progress)%")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    private func statCard(_ title: String, _ value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.blue)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(6)
     }
     
     private var gameOverTitle: String {

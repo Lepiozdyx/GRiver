@@ -2,37 +2,35 @@ import SwiftUI
 
 // MARK: - Main Menu View
 struct MainMenuView: View {
-    @StateObject private var viewModel = MainMenuViewModel()
+    @EnvironmentObject var viewModel: MainMenuViewModel
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 30) {
-                
-                // MARK: - Title Section
-                titleSection
-                
-                // MARK: - Game Status Section
-                if viewModel.isGameActive {
-                    gameStatusSection
-                }
-                
-                // MARK: - Main Buttons Section
-                mainButtonsSection
-                
-                // MARK: - Secondary Actions Section
-                secondaryActionsSection
-                
-                Spacer()
-                
-                // MARK: - Debug Info Section
-                if viewModel.isGameActive {
-                    debugInfoSection
-                }
+        VStack(spacing: 30) {
+            
+            // MARK: - Title Section
+            titleSection
+            
+            // MARK: - Game Status Section
+            if viewModel.isGameActive {
+                gameStatusSection
             }
-            .padding()
-            .navigationTitle("")
-            .navigationBarHidden(true)
+            
+            // MARK: - Main Buttons Section
+            mainButtonsSection
+            
+            // MARK: - Secondary Actions Section
+            secondaryActionsSection
+            
+            Spacer()
+            
+            // MARK: - Debug Info Section
+            if viewModel.isGameActive {
+                debugInfoSection
+            }
         }
+        .padding()
+        .navigationTitle("")
+        .navigationBarHidden(true)
         .alert(viewModel.alertTitle, isPresented: $viewModel.showLoadError) {
             Button("OK") {
                 viewModel.dismissAlert()
@@ -120,10 +118,10 @@ struct MainMenuView: View {
     private var mainButtonsSection: some View {
         VStack(spacing: 16) {
             
-            // Play Button
+            // Play Button - navigation handled externally
             Button(action: {
+                // Let the parent coordinator handle the navigation flow
                 viewModel.handlePlayAction()
-                // Navigation will be handled by parent coordinator
             }) {
                 HStack {
                     Image(systemName: playButtonIcon)
@@ -137,10 +135,10 @@ struct MainMenuView: View {
                 .cornerRadius(8)
             }
             
-            // Base Button
+            // Base Button - navigation handled externally
             Button(action: {
+                // Let the parent coordinator handle the navigation flow
                 viewModel.handleBaseAction()
-                // Navigation will be handled by parent coordinator
             }) {
                 HStack {
                     Image(systemName: "building.2")
@@ -235,55 +233,9 @@ struct MainMenuView: View {
     }
 }
 
-// MARK: - Navigation Integration View
-struct MainMenuNavigationView: View {
-    @StateObject private var viewModel = MainMenuViewModel()
-    
-    var body: some View {
-        Group {
-            switch viewModel.currentDestination {
-            case .mainMenu:
-                MainMenuView()
-                
-            case .gameMap:
-                GameMapView()
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Menu") {
-                                viewModel.navigateToMainMenu()
-                            }
-                        }
-                    }
-                
-            case .playerBase:
-                PlayerBaseView()
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Menu") {
-                                viewModel.navigateToMainMenu()
-                            }
-                        }
-                    }
-                
-            case .operationResult:
-                // Placeholder for OperationResultView
-                Text("Operation Result")
-                    .navigationTitle("Results")
-                
-            case .gameOver:
-                // Placeholder for GameOverView
-                Text("Game Over")
-                    .navigationTitle("Game Over")
-            }
-        }
-        .environmentObject(viewModel)
-    }
-}
-
 // MARK: - Preview
 #Preview {
     MainMenuView()
+        .environmentObject(MainMenuViewModel())
         .preferredColorScheme(.dark)
 }

@@ -19,6 +19,10 @@ class GameScene: SKScene {
     private var poiContainer: SKNode?
     private var poiNodes: [UUID: POINode] = [:]
     
+    // Selection state
+    private var selectedPOINode: POINode?
+    private var lastSelectedPOI: PointOfInterest?
+    
     // Camera and gesture handling
     private var mapCamera: SKCameraNode?
     private var lastPanPoint: CGPoint = .zero
@@ -36,10 +40,13 @@ class GameScene: SKScene {
         setupBackground()
         setupPOIContainer()
         setupGestureRecognizers()
+        
+        // Listen for external POI updates
+        setupNotificationObservers()
     }
     
     private func setupScene() {
-        backgroundColor = SKColor.systemBackground
+        backgroundColor = SKColor.black
         scaleMode = .aspectFit
     }
     
@@ -52,15 +59,49 @@ class GameScene: SKScene {
         
         // Center camera on map
         camera.position = CGPoint(x: mapSize.width / 2, y: mapSize.height / 2)
-        initialCameraScale = 1.0 // Set directly instead of using camera.xScale
+        initialCameraScale = 1.0
     }
     
     private func setupBackground() {
-        let background = SKSpriteNode(color: SKColor.systemGray5, size: mapSize)
+        let background = SKSpriteNode(color: SKColor.systemGray6, size: mapSize)
         background.position = CGPoint(x: mapSize.width / 2, y: mapSize.height / 2)
         background.zPosition = -1
         addChild(background)
         backgroundNode = background
+        
+        // Add grid pattern for tactical feel
+        addGridPattern()
+    }
+    
+    private func addGridPattern() {
+        let gridSize: CGFloat = 50
+        let lineWidth: CGFloat = 0.5
+        
+        // Vertical lines
+        for x in stride(from: 0, through: mapSize.width, by: gridSize) {
+            let line = SKShapeNode()
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: mapSize.height))
+            line.path = path
+            line.strokeColor = SKColor.gray.withAlphaComponent(0.3)
+            line.lineWidth = lineWidth
+            line.zPosition = -0.5
+            addChild(line)
+        }
+        
+        // Horizontal lines
+        for y in stride(from: 0, through: mapSize.height, by: gridSize) {
+            let line = SKShapeNode()
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: mapSize.width, y: y))
+            line.path = path
+            line.strokeColor = SKColor.gray.withAlphaComponent(0.3)
+            line.lineWidth = lineWidth
+            line.zPosition = -0.5
+            addChild(line)
+        }
     }
     
     private func setupPOIContainer() {
@@ -73,8 +114,13 @@ class GameScene: SKScene {
     private func setupGestureRecognizers() {
         guard let view = view else { return }
         
+        // Clear existing gesture recognizers
+        view.gestureRecognizers?.forEach { view.removeGestureRecognizer($0) }
+        
         // Pan gesture
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
+        panGesture.minimumNumberOfTouches = 1
+        panGesture.maximumNumberOfTouches = 1
         view.addGestureRecognizer(panGesture)
         
         // Pinch gesture
@@ -84,6 +130,15 @@ class GameScene: SKScene {
         // Tap gesture
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
         view.addGestureRecognizer(tapGesture)
+    }
+    
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePOIUpdateNotification(_:)),
+            name: .poiUpdated,
+            object: nil
+        )
     }
     
     // MARK: - Map Manager Integration
@@ -103,9 +158,13 @@ class GameScene: SKScene {
         for poi in mapManager.pointsOfInterest {
             let poiNode = POINode(poi: poi)
             poiNode.position = poi.position
+            poiNode.name = "poi_\(poi.id.uuidString)"
             container.addChild(poiNode)
             poiNodes[poi.id] = poiNode
         }
+        
+        // Update selection if needed
+        updateSelectedPOINode()
     }
     
     func updatePOI(with id: UUID) {
@@ -114,6 +173,24 @@ class GameScene: SKScene {
               let poiNode = poiNodes[id] else { return }
         
         poiNode.updatePOI(poi)
+        
+        // Update last selected POI if it matches
+        if lastSelectedPOI?.id == id {
+            lastSelectedPOI = poi
+        }
+    }
+    
+    private func updateSelectedPOINode() {
+        // Clear current selection visual
+        selectedPOINode?.setSelected(false)
+        selectedPOINode = nil
+        
+        // Update selection if we have a selected POI
+        if let selectedPOI = lastSelectedPOI,
+           let poiNode = poiNodes[selectedPOI.id] {
+            selectedPOINode = poiNode
+            poiNode.setSelected(true)
+        }
     }
     
     // MARK: - Gesture Handling
@@ -164,16 +241,47 @@ class GameScene: SKScene {
         
         // Check if tap hit any POI
         if let tappedPOI = findPOI(at: sceneLocation) {
-            gameDelegate?.didSelectPOI(tappedPOI, at: sceneLocation)
+            selectPOI(tappedPOI, at: sceneLocation)
         } else {
-            gameDelegate?.didDeselectPOI()
+            deselectPOI()
         }
     }
     
     private func findPOI(at position: CGPoint) -> PointOfInterest? {
         guard let mapManager = mapManager else { return nil }
         
-        return mapManager.poi(at: position, tolerance: 30.0)
+        // Find POI within tolerance
+        let tolerance: CGFloat = 40.0
+        return mapManager.poi(at: position, tolerance: tolerance)
+    }
+    
+    private func selectPOI(_ poi: PointOfInterest, at position: CGPoint) {
+        lastSelectedPOI = poi
+        updateSelectedPOINode()
+        
+        // Notify delegate
+        gameDelegate?.didSelectPOI(poi, at: position)
+        
+        // Send notification for coordinator integration
+        NotificationCenter.default.post(
+            name: .poiSelected,
+            object: self,
+            userInfo: [
+                "poi": poi,
+                "position": position
+            ]
+        )
+    }
+    
+    private func deselectPOI() {
+        lastSelectedPOI = nil
+        updateSelectedPOINode()
+        
+        // Notify delegate
+        gameDelegate?.didDeselectPOI()
+        
+        // Send notification
+        NotificationCenter.default.post(name: .poiDeselected, object: self)
     }
     
     private func constrainCameraPosition(_ position: CGPoint) -> CGPoint {
@@ -198,14 +306,14 @@ class GameScene: SKScene {
     func focusOnPOI(_ poi: PointOfInterest, animated: Bool = true) {
         guard let camera = mapCamera else { return }
         
-        let targetPosition = poi.position
+        let targetPosition = constrainCameraPosition(poi.position)
         
         if animated {
             let moveAction = SKAction.move(to: targetPosition, duration: 0.5)
             moveAction.timingMode = .easeInEaseOut
             camera.run(moveAction)
         } else {
-            camera.position = constrainCameraPosition(targetPosition)
+            camera.position = targetPosition
         }
     }
     
@@ -226,6 +334,16 @@ class GameScene: SKScene {
         }
     }
     
+    // MARK: - Notification Handlers
+    @objc private func handlePOIUpdateNotification(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let poiID = userInfo["poiID"] as? UUID else { return }
+        
+        DispatchQueue.main.async {
+            self.updatePOI(with: poiID)
+        }
+    }
+    
     // MARK: - Scene Update
     override func update(_ currentTime: TimeInterval) {
         // Update POI visual states if needed
@@ -233,49 +351,56 @@ class GameScene: SKScene {
     }
     
     private func updatePOIVisuals() {
-        guard let mapManager = mapManager else { return }
-        
-        for poi in mapManager.pointsOfInterest {
-            if let poiNode = poiNodes[poi.id] {
-                poiNode.updateVisualState()
-            }
+        for poiNode in poiNodes.values {
+            poiNode.updateVisualState()
         }
     }
     
     // MARK: - Cleanup
     deinit {
+        NotificationCenter.default.removeObserver(self)
         view?.gestureRecognizers?.forEach { view?.removeGestureRecognizer($0) }
     }
 }
 
 // MARK: - POI Node
 class POINode: SKSpriteNode {
-    private var poi: PointOfInterest // Changed from let to var
+    private var poi: PointOfInterest
     private let typeLabel: SKLabelNode
     private let statusIndicator: SKShapeNode
+    private let selectionRing: SKShapeNode
     
     init(poi: PointOfInterest) {
         self.poi = poi
         
         // Create type label
         typeLabel = SKLabelNode(fontNamed: "Helvetica-Bold")
-        typeLabel.fontSize = 12
+        typeLabel.fontSize = 10
         typeLabel.fontColor = .white
-        typeLabel.text = poi.type.displayName
-        typeLabel.position = CGPoint(x: 0, y: -25)
+        typeLabel.text = poi.type.displayName.prefix(3).uppercased()
+        typeLabel.position = CGPoint(x: 0, y: -30)
         typeLabel.zPosition = 2
         
         // Create status indicator
-        statusIndicator = SKShapeNode(circleOfRadius: 5)
-        statusIndicator.position = CGPoint(x: 15, y: 15)
+        statusIndicator = SKShapeNode(circleOfRadius: 4)
+        statusIndicator.position = CGPoint(x: 12, y: 12)
         statusIndicator.zPosition = 2
         
+        // Create selection ring
+        selectionRing = SKShapeNode(circleOfRadius: 25)
+        selectionRing.strokeColor = .cyan
+        selectionRing.lineWidth = 2
+        selectionRing.fillColor = .clear
+        selectionRing.zPosition = 0
+        selectionRing.isHidden = true
+        
         let texture = SKTexture()
-        super.init(texture: texture, color: .clear, size: CGSize(width: 40, height: 40))
+        super.init(texture: texture, color: .clear, size: CGSize(width: 30, height: 30))
         
         setupAppearance()
         addChild(typeLabel)
         addChild(statusIndicator)
+        addChild(selectionRing)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -302,25 +427,60 @@ class POINode: SKSpriteNode {
     }
     
     func updatePOI(_ newPOI: PointOfInterest) {
-        // Update internal POI reference and visual state
         self.poi = newPOI
         updateStatusIndicator()
+        updateTypeLabel()
     }
     
     func updateVisualState() {
         updateStatusIndicator()
     }
     
+    func setSelected(_ selected: Bool) {
+        selectionRing.isHidden = !selected
+        
+        if selected {
+            // Add pulsing animation
+            let pulseAction = SKAction.sequence([
+                SKAction.scale(to: 1.1, duration: 0.5),
+                SKAction.scale(to: 1.0, duration: 0.5)
+            ])
+            selectionRing.run(SKAction.repeatForever(pulseAction))
+        } else {
+            selectionRing.removeAllActions()
+        }
+    }
+    
     private func updateStatusIndicator() {
         switch poi.status {
         case .active:
             statusIndicator.fillColor = .green
+            statusIndicator.strokeColor = .green
         case .captured:
             statusIndicator.fillColor = .blue
+            statusIndicator.strokeColor = .blue
         case .destroyed:
             statusIndicator.fillColor = .black
+            statusIndicator.strokeColor = .black
         }
-        
-        statusIndicator.strokeColor = statusIndicator.fillColor
     }
+    
+    private func updateTypeLabel() {
+        typeLabel.text = poi.type.displayName.prefix(3).uppercased()
+        
+        // Update text color based on status
+        switch poi.status {
+        case .active:
+            typeLabel.fontColor = .white
+        case .captured:
+            typeLabel.fontColor = .cyan
+        case .destroyed:
+            typeLabel.fontColor = .gray
+        }
+    }
+}
+
+// MARK: - Additional Notification Names
+extension Notification.Name {
+    static let poiUpdated = Notification.Name("poiUpdated")
 }
