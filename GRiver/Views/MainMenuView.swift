@@ -1,32 +1,24 @@
 import SwiftUI
 
-// MARK: - Main Menu View
 struct MainMenuView: View {
     @EnvironmentObject var viewModel: MainMenuViewModel
     
     var body: some View {
         VStack(spacing: 30) {
             
-            // MARK: - Title Section
             titleSection
             
-            // MARK: - Game Status Section
             if viewModel.isGameActive {
                 gameStatusSection
             }
             
-            // MARK: - Main Buttons Section
             mainButtonsSection
             
-            // MARK: - Secondary Actions Section
-            secondaryActionsSection
+            if viewModel.hasSavedGame {
+                savedGameInfoSection
+            }
             
             Spacer()
-            
-            // MARK: - Debug Info Section
-            if viewModel.isGameActive {
-                debugInfoSection
-            }
         }
         .padding()
         .navigationTitle("")
@@ -48,22 +40,21 @@ struct MainMenuView: View {
         } message: {
             Text("This will overwrite your current progress.")
         }
-        .confirmationDialog("Exit Game?", isPresented: $viewModel.showExitConfirm) {
-            Button("Exit", role: .destructive) {
-                viewModel.confirmExit()
+        .confirmationDialog("Delete Saved Game?", isPresented: $viewModel.showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                viewModel.confirmDeleteSave()
             }
             Button("Cancel", role: .cancel) {
                 viewModel.dismissAlert()
             }
         } message: {
-            Text("Your progress will be saved automatically.")
+            Text("All progress will be lost permanently. This cannot be undone.")
         }
         .onAppear {
             viewModel.checkForSavedGame()
         }
     }
     
-    // MARK: - Title Section
     private var titleSection: some View {
         VStack(spacing: 8) {
             Text("GLOBAL STRATEGY")
@@ -78,7 +69,6 @@ struct MainMenuView: View {
         .padding(.top, 40)
     }
     
-    // MARK: - Game Status Section
     private var gameStatusSection: some View {
         VStack(spacing: 8) {
             Text("Current Game")
@@ -114,11 +104,8 @@ struct MainMenuView: View {
         }
     }
     
-    // MARK: - Main Buttons Section
     private var mainButtonsSection: some View {
         VStack(spacing: 16) {
-            
-            // Single Play/Continue Button
             Button(action: {
                 viewModel.handlePlayAction()
             }) {
@@ -134,6 +121,40 @@ struct MainMenuView: View {
                 .cornerRadius(12)
                 .shadow(radius: 2)
             }
+            
+            if viewModel.hasSavedGame {
+                Button(action: {
+                    viewModel.handleManageProgress()
+                }) {
+                    HStack {
+                        Image(systemName: "gear")
+                        Text("Manage Progress")
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.secondary.opacity(0.2))
+                    .foregroundColor(.primary)
+                    .cornerRadius(12)
+                }
+                
+                if viewModel.showManageProgress {
+                    Button(action: {
+                        viewModel.handleDeleteProgress()
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Delete Progress")
+                                .fontWeight(.medium)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color.red.opacity(0.2))
+                        .foregroundColor(.red)
+                        .cornerRadius(12)
+                    }
+                }
+            }
         }
     }
     
@@ -141,73 +162,19 @@ struct MainMenuView: View {
         switch viewModel.gameStatus {
         case .paused: return "play.circle"
         case .playing: return "map"
-        default: return "plus.circle"
+        default: return viewModel.hasSavedGame ? "arrow.clockwise.circle" : "plus.circle"
         }
     }
     
-    // MARK: - Secondary Actions Section
-    private var secondaryActionsSection: some View {
-        VStack(spacing: 12) {
-            
-            // Save Game Info
-            if viewModel.hasSavedGame {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Saved Game Available")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text(viewModel.savedGameInfo)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(8)
-                .background(Color.gray.opacity(0.05))
-                .cornerRadius(4)
-            }
-            
-            HStack(spacing: 12) {
-                
-                // Delete Save Button (if has save)
-                if viewModel.hasSavedGame {
-                    Button("Delete Save") {
-                        viewModel.deleteSavedGame()
-                    }
-                    .font(.caption)
-                    .foregroundColor(.red)
-                }
-                
-                Spacer()
-                
-                // Settings/Debug Button
-                Button("Debug Info") {
-                    viewModel.simulateGameProgress()
-                }
-                .font(.caption)
-                .foregroundColor(.blue)
-                
-                // Exit Button
-                Button("Exit") {
-                    viewModel.handleExitAction()
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-            }
-        }
-    }
-    
-    // MARK: - Debug Info Section
-    private var debugInfoSection: some View {
+    private var savedGameInfoSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Debug Information")
+            Text("Saved Game Available")
                 .font(.caption)
-                .fontWeight(.medium)
                 .foregroundColor(.secondary)
             
-            Text(viewModel.debugInfo)
+            Text(viewModel.savedGameInfo)
                 .font(.caption2)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
@@ -216,7 +183,6 @@ struct MainMenuView: View {
     }
 }
 
-// MARK: - Preview
 #Preview {
     MainMenuView()
         .environmentObject(MainMenuViewModel())

@@ -74,21 +74,24 @@ class AppCoordinator: ObservableObject {
     }
     
     private func handleContinueGame() {
-        if let recentSave = gameSaveManager.mostRecentSave {
-            let result = gameSaveManager.loadGame(from: recentSave)
-            switch result {
-            case .success(let gameState):
-                initializeGameState(GameStateManager(savedGameState: gameState))
-                navigateToGameMap()
-            case .failure(let error):
-                mainMenuViewModel.showLoadError(error.localizedDescription)
-            }
-        } else {
+        let result = gameSaveManager.loadGame()
+        switch result {
+        case .success(let gameState):
+            initializeGameState(GameStateManager(savedGameState: gameState))
+            navigateToGameMap()
+        case .failure(let error):
+            mainMenuViewModel.showLoadError(error.localizedDescription)
             handleStartNewGame()
         }
     }
     
     func navigateToMainMenu() {
+        if let gameManager = gameStateManager, gameManager.isGameActive {
+            let gameState = gameManager.exportGameState()
+            let _ = gameSaveManager.saveGame(gameState)
+            mainMenuViewModel.checkForSavedGame()
+        }
+        
         withAnimation {
             currentFlow = .mainMenu
             navigationPath = NavigationPath()
@@ -165,7 +168,6 @@ class AppCoordinator: ObservableObject {
     func startNewGame() {
         let newGameState = GameStateManager()
         initializeGameState(newGameState)
-        saveCurrentGame()
     }
     
     private func initializeGameState(_ gameState: GameStateManager) {
@@ -180,19 +182,6 @@ class AppCoordinator: ObservableObject {
         baseViewModel = BaseViewModel(gameStateManager: gameManager)
         gameSceneViewModel = GameSceneViewModel(gameStateManager: gameManager)
         actionOverlayViewModel = ActionOverlayViewModel(gameStateManager: gameManager)
-    }
-    
-    func loadGame(from saveSlot: SaveSlot) -> Bool {
-        let result = gameSaveManager.loadGame(from: saveSlot)
-        
-        switch result {
-        case .success(let gameState):
-            initializeGameState(GameStateManager(savedGameState: gameState))
-            return true
-            
-        case .failure:
-            return false
-        }
     }
     
     func getBaseViewModel() -> BaseViewModel {
@@ -259,8 +248,6 @@ class AppCoordinator: ObservableObject {
     func handleOperationResult(_ result: OperationResult) {
         currentOperationResult = result
         
-        saveCurrentGame()
-        
         withAnimation {
             showOperationResult = true
         }
@@ -293,20 +280,6 @@ class AppCoordinator: ObservableObject {
         }
     }
     
-    func saveCurrentGame() {
-        guard let gameManager = gameStateManager else { return }
-        
-        let gameState = gameManager.exportGameState()
-        let result = gameSaveManager.autoSave(gameState)
-        
-        switch result {
-        case .success:
-            mainMenuViewModel.checkForSavedGame()
-        case .failure(let error):
-            print("Auto-save failed: \(error.localizedDescription)")
-        }
-    }
-    
     func hideAllOverlays() {
         showActionOverlay = false
         showOperationResult = false
@@ -319,7 +292,6 @@ class AppCoordinator: ObservableObject {
     func handleAppDidEnterBackground() {
         if let gameManager = gameStateManager, gameManager.isGameActive {
             gameManager.pauseGame()
-            saveCurrentGame()
         }
     }
     
