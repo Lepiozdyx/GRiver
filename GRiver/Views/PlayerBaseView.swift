@@ -1,43 +1,46 @@
 import SwiftUI
 
-// MARK: - Player Base View
 struct PlayerBaseView: View {
     @EnvironmentObject var viewModel: BaseViewModel
+    let isOverlay: Bool
+    let onClose: (() -> Void)?
+    
+    init(isOverlay: Bool = false, onClose: (() -> Void)? = nil) {
+        self.isOverlay = isOverlay
+        self.onClose = onClose
+    }
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
                 
-                // MARK: - Header Section with Navigation Info
-                baseHeaderSection
+                if isOverlay {
+                    overlayHeader
+                } else {
+                    baseHeaderSection
+                    navigationHintSection
+                }
                 
-                // MARK: - Navigation Hint
-                navigationHintSection
-                
-                // MARK: - Resources Section
                 resourcesSection
                 
-                // MARK: - Buildings Section
                 buildingsSection
                 
-                // MARK: - Unit Recruitment Section
                 unitRecruitmentSection
                 
-                // MARK: - Supply Purchase Section
                 supplyPurchaseSection
                 
-                // MARK: - Base Status Section
                 baseStatusSection
                 
-                // MARK: - Navigation Section
-                navigationSection
+                if !isOverlay {
+                    navigationSection
+                }
                 
                 Spacer(minLength: 20)
             }
             .padding()
         }
-        .navigationTitle("Command Base")
-        .navigationBarHidden(true)
+        .navigationTitle(isOverlay ? "" : "Command Base")
+        .navigationBarHidden(isOverlay)
         .alert(viewModel.alertTitle, isPresented: $viewModel.showUpgradeAlert) {
             Button("OK") {
                 viewModel.dismissAlert()
@@ -50,7 +53,26 @@ struct PlayerBaseView: View {
         }
     }
     
-    // MARK: - Base Header Section
+    private var overlayHeader: some View {
+        HStack {
+            Text("COMMAND BASE")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            if let onClose = onClose {
+                Button("Close") {
+                    onClose()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+        .padding(.bottom, 8)
+    }
+    
     private var baseHeaderSection: some View {
         VStack(spacing: 8) {
             Text("COMMAND BASE")
@@ -62,7 +84,6 @@ struct PlayerBaseView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            // Base level indicator
             HStack {
                 Text("Base Level:")
                     .foregroundColor(.secondary)
@@ -78,7 +99,6 @@ struct PlayerBaseView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - Navigation Hint Section
     private var navigationHintSection: some View {
         VStack(spacing: 6) {
             HStack {
@@ -101,29 +121,26 @@ struct PlayerBaseView: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Resources Section
     private var resourcesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Current Resources")
-                .font(.headline)
-                .foregroundColor(.primary)
+                .font(.subheadline)
+                .fontWeight(.medium)
             
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible())
-            ], spacing: 8) {
+            ], spacing: 6) {
                 resourceCard("Money", "\(viewModel.playerResources.money)", "💰", .green)
                 resourceCard("Ammo", "\(viewModel.playerResources.ammo)", "🔫", .orange)
                 resourceCard("Food", "\(viewModel.playerResources.food)", "🍖", .brown)
                 resourceCard("Units", "\(viewModel.playerResources.units)", "👤", .blue)
             }
             
-            // Storage capacity info
             let capacity = viewModel.baseManager.storageCapacity
             Text("Storage: \(viewModel.playerResources.money)/\(capacity.money) money, \(viewModel.playerResources.ammo)/\(capacity.ammo) ammo, \(viewModel.playerResources.food)/\(capacity.food) food")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(.secondary)
-                .padding(.top, 4)
         }
         .padding()
         .background(Color.gray.opacity(0.1))
@@ -131,361 +148,269 @@ struct PlayerBaseView: View {
     }
     
     private func resourceCard(_ title: String, _ value: String, _ icon: String, _ color: Color) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Text(icon)
-                .font(.title2)
+                .font(.caption)
             
             Text(value)
-                .font(.headline)
+                .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(color)
             
             Text(title)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(color.opacity(0.1))
-        .cornerRadius(6)
+        .cornerRadius(4)
     }
     
-    // MARK: - Buildings Section
     private var buildingsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Base Buildings")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Buildings")
+                .font(.subheadline)
+                .fontWeight(.medium)
             
-            // Storage Building
-            buildingCard(
-                title: "Storage Facility",
-                level: viewModel.baseManager.storageLevel,
-                maxLevel: BuildingType.storage.maxLevel,
-                description: "Increases resource storage capacity",
-                upgradeCost: viewModel.getUpgradeCost(for: .storage),
-                canUpgrade: viewModel.canUpgradeStorage,
-                upgradeAction: viewModel.upgradeStorage
-            )
-            
-            // Barracks Building
-            buildingCard(
-                title: "Barracks",
-                level: viewModel.baseManager.barracksLevel,
-                maxLevel: BuildingType.barracks.maxLevel,
-                description: "Increases maximum unit capacity",
-                upgradeCost: viewModel.getUpgradeCost(for: .barracks),
-                canUpgrade: viewModel.canUpgradeBarracks,
-                upgradeAction: viewModel.upgradeBarracks
-            )
+            VStack(spacing: 8) {
+                buildingRow(
+                    title: "Storage",
+                    level: viewModel.baseManager.storageLevel,
+                    maxLevel: BuildingType.storage.maxLevel,
+                    upgradeCost: viewModel.getUpgradeCost(for: .storage),
+                    canUpgrade: viewModel.canUpgradeStorage,
+                    upgradeAction: viewModel.upgradeStorage
+                )
+                
+                buildingRow(
+                    title: "Barracks",
+                    level: viewModel.baseManager.barracksLevel,
+                    maxLevel: BuildingType.barracks.maxLevel,
+                    upgradeCost: viewModel.getUpgradeCost(for: .barracks),
+                    canUpgrade: viewModel.canUpgradeBarracks,
+                    upgradeAction: viewModel.upgradeBarracks
+                )
+            }
         }
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
     }
     
-    private func buildingCard(
+    private func buildingRow(
         title: String,
         level: Int,
         maxLevel: Int,
-        description: String,
         upgradeCost: Resource,
         canUpgrade: Bool,
         upgradeAction: @escaping () -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
                 
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("Level \(level)")
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.blue)
-                    
-                    if level < maxLevel {
-                        Text("/ \(maxLevel)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("MAX")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                }
+                Text("Level \(level)/\(maxLevel)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
             
+            Spacer()
+            
             if level < maxLevel {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Upgrade Cost:")
-                        .font(.caption)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("💰\(upgradeCost.money)")
+                        .font(.caption2)
                         .foregroundColor(.secondary)
-                    
-                    HStack {
-                        if upgradeCost.money > 0 {
-                            Text("💰\(upgradeCost.money)")
-                        }
-                        if upgradeCost.ammo > 0 {
-                            Text("🔫\(upgradeCost.ammo)")
-                        }
-                        if upgradeCost.food > 0 {
-                            Text("🍖\(upgradeCost.food)")
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
                     
                     Button("Upgrade") {
                         upgradeAction()
                     }
                     .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .controlSize(.mini)
                     .disabled(!canUpgrade)
                 }
-            }
-        }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(6)
-    }
-    
-    // MARK: - Unit Recruitment Section
-    private var unitRecruitmentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Unit Recruitment")
-                .font(.headline)
-            
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Units to recruit:")
-                        .font(.subheadline)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
-                        Button("-") {
-                            if viewModel.unitsToBuy > 1 {
-                                viewModel.setUnitsToBuy(viewModel.unitsToBuy - 1)
-                            }
-                        }
-                        .disabled(viewModel.unitsToBuy <= 1)
-                        
-                        Text("\(viewModel.unitsToBuy)")
-                            .frame(width: 50)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(4)
-                        
-                        Button("+") {
-                            let maxPossible = min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits())
-                            if viewModel.unitsToBuy < maxPossible {
-                                viewModel.setUnitsToBuy(viewModel.unitsToBuy + 1)
-                            }
-                        }
-                        .disabled(viewModel.unitsToBuy >= min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits()))
-                    }
-                }
-                
-                let unitCost = viewModel.getUnitRecruitmentCost()
-                Text("Cost: 💰\(unitCost.money) 🍖\(unitCost.food) per unit")
+            } else {
+                Text("MAX")
                     .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                HStack {
-                    Text("Available slots: \(viewModel.getMaxRecruitableUnits())")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("Can afford: \(viewModel.getMaxAffordableUnits())")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack(spacing: 12) {
-                    Button("Recruit Units") {
-                        viewModel.recruitUnits()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!viewModel.canAffordUnits)
-                    
-                    Button("Max") {
-                        viewModel.buyMaxUnits()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(viewModel.getMaxRecruitableUnits() == 0 || viewModel.getMaxAffordableUnits() == 0)
-                }
+                    .fontWeight(.medium)
+                    .foregroundColor(.green)
             }
         }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(8)
+        .padding(.vertical, 4)
     }
     
-    // MARK: - Supply Purchase Section
-    private var supplyPurchaseSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Supply Purchase")
-                .font(.headline)
+    private var unitRecruitmentSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Unit Recruitment")
+                .font(.subheadline)
+                .fontWeight(.medium)
             
-            VStack(spacing: 12) {
-                // Ammo Purchase
-                supplyPurchaseRow(
-                    title: "Ammunition",
-                    icon: "🔫",
-                    value: $viewModel.ammoToBuy,
-                    maxValue: viewModel.getMaxAffordableAmmo(),
-                    pricePerUnit: 5,
-                    onMaxTap: viewModel.buyMaxAmmo
-                )
-                
-                // Food Purchase
-                supplyPurchaseRow(
-                    title: "Food Supplies",
-                    icon: "🍖",
-                    value: $viewModel.foodToBuy,
-                    maxValue: viewModel.getMaxAffordableFood(),
-                    pricePerUnit: 2,
-                    onMaxTap: viewModel.buyMaxFood
-                )
-                
-                // Total cost and purchase button
-                let supplyCost = viewModel.getSupplyCost()
-                if supplyCost.money > 0 {
-                    HStack {
-                        Text("Total cost:")
-                            .font(.subheadline)
-                        
-                        Spacer()
-                        
-                        Text("💰\(supplyCost.money)")
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                    }
-                    .padding(.top, 4)
-                }
-                
-                Button("Purchase Supplies") {
-                    viewModel.purchaseSupplies()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canAffordSupplies || (viewModel.ammoToBuy == 0 && viewModel.foodToBuy == 0))
-            }
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(8)
-    }
-    
-    private func supplyPurchaseRow(
-        title: String,
-        icon: String,
-        value: Binding<Int>,
-        maxValue: Int,
-        pricePerUnit: Int,
-        onMaxTap: @escaping () -> Void
-    ) -> some View {
-        VStack(spacing: 4) {
             HStack {
-                Text("\(icon) \(title)")
-                    .font(.subheadline)
+                Text("Units:")
                 
                 Spacer()
                 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Button("-") {
-                        if value.wrappedValue > 0 {
-                            value.wrappedValue -= 1
+                        if viewModel.unitsToBuy > 1 {
+                            viewModel.setUnitsToBuy(viewModel.unitsToBuy - 1)
                         }
                     }
-                    .disabled(value.wrappedValue <= 0)
+                    .disabled(viewModel.unitsToBuy <= 1)
+                    .controlSize(.mini)
                     
-                    Text("\(value.wrappedValue)")
-                        .frame(width: 50)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                    Text("\(viewModel.unitsToBuy)")
+                        .frame(width: 30)
+                        .font(.caption)
+                        .padding(.horizontal, 4)
                         .background(Color.gray.opacity(0.2))
-                        .cornerRadius(4)
+                        .cornerRadius(2)
                     
                     Button("+") {
-                        if value.wrappedValue < maxValue {
-                            value.wrappedValue += 1
+                        let maxPossible = min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits())
+                        if viewModel.unitsToBuy < maxPossible {
+                            viewModel.setUnitsToBuy(viewModel.unitsToBuy + 1)
                         }
                     }
-                    .disabled(value.wrappedValue >= maxValue)
-                    
-                    Button("Max") {
-                        onMaxTap()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .disabled(viewModel.unitsToBuy >= min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits()))
+                    .controlSize(.mini)
                 }
             }
             
-            HStack {
-                Text("💰\(pricePerUnit) each")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("Max: \(maxValue)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            let unitCost = viewModel.getUnitRecruitmentCost()
+            Text("Cost: 💰\(unitCost.money) 🍖\(unitCost.food)")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            
+            Button("Recruit Units") {
+                viewModel.recruitUnits()
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .disabled(!viewModel.canAffordUnits)
         }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
     }
     
-    // MARK: - Base Status Section
-    private var baseStatusSection: some View {
+    private var supplyPurchaseSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Base Status")
-                .font(.headline)
-            
-            Text(viewModel.baseStatusSummary)
+            Text("Supplies")
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .fontWeight(.medium)
+            
+            VStack(spacing: 6) {
+                HStack {
+                    Text("🔫 Ammo:")
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Button("-") {
+                            if viewModel.ammoToBuy > 0 {
+                                viewModel.setAmmoToBuy(viewModel.ammoToBuy - 1)
+                            }
+                        }
+                        .disabled(viewModel.ammoToBuy <= 0)
+                        .controlSize(.mini)
+                        
+                        Text("\(viewModel.ammoToBuy)")
+                            .frame(width: 30)
+                            .font(.caption)
+                            .padding(.horizontal, 4)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(2)
+                        
+                        Button("+") {
+                            if viewModel.ammoToBuy < viewModel.getMaxAffordableAmmo() {
+                                viewModel.setAmmoToBuy(viewModel.ammoToBuy + 1)
+                            }
+                        }
+                        .disabled(viewModel.ammoToBuy >= viewModel.getMaxAffordableAmmo())
+                        .controlSize(.mini)
+                    }
+                }
+                
+                HStack {
+                    Text("🍖 Food:")
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Button("-") {
+                            if viewModel.foodToBuy > 0 {
+                                viewModel.setFoodToBuy(viewModel.foodToBuy - 1)
+                            }
+                        }
+                        .disabled(viewModel.foodToBuy <= 0)
+                        .controlSize(.mini)
+                        
+                        Text("\(viewModel.foodToBuy)")
+                            .frame(width: 30)
+                            .font(.caption)
+                            .padding(.horizontal, 4)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(2)
+                        
+                        Button("+") {
+                            if viewModel.foodToBuy < viewModel.getMaxAffordableFood() {
+                                viewModel.setFoodToBuy(viewModel.foodToBuy + 1)
+                            }
+                        }
+                        .disabled(viewModel.foodToBuy >= viewModel.getMaxAffordableFood())
+                        .controlSize(.mini)
+                    }
+                }
+            }
+            
+            let supplyCost = viewModel.getSupplyCost()
+            if supplyCost.money > 0 {
+                Text("Total: 💰\(supplyCost.money)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Button("Purchase Supplies") {
+                viewModel.purchaseSupplies()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .disabled(!viewModel.canAffordSupplies || (viewModel.ammoToBuy == 0 && viewModel.foodToBuy == 0))
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    private var baseStatusSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Base Status")
+                .font(.subheadline)
+                .fontWeight(.medium)
             
             let validation = viewModel.getBaseValidation()
             
-            if !validation.issues.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("⚠️ Issues:")
+            if validation.isValid {
+                Text("✅ Base operational")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            } else {
+                ForEach(validation.issues, id: \.self) { issue in
+                    Text("⚠️ \(issue)")
                         .font(.caption)
                         .foregroundColor(.red)
-                        .fontWeight(.medium)
-                    
-                    ForEach(validation.issues, id: \.self) { issue in
-                        Text("• \(issue)")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
                 }
             }
             
             if !validation.warnings.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("⚡ Warnings:")
+                ForEach(validation.warnings, id: \.self) { warning in
+                    Text("⚡ \(warning)")
                         .font(.caption)
                         .foregroundColor(.orange)
-                        .fontWeight(.medium)
-                    
-                    ForEach(validation.warnings, id: \.self) { warning in
-                        Text("• \(warning)")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
                 }
             }
         }
@@ -494,7 +419,6 @@ struct PlayerBaseView: View {
         .cornerRadius(8)
     }
     
-    // MARK: - Navigation Section
     private var navigationSection: some View {
         VStack(spacing: 12) {
             if let warning = viewModel.leaveBaseWarning {
@@ -513,7 +437,6 @@ struct PlayerBaseView: View {
                     .cornerRadius(6)
             }
             
-            // Quick return to map hint
             Text("Tip: Use the navigation buttons above to return to the tactical map and begin operations.")
                 .font(.caption)
                 .foregroundColor(.secondary)
