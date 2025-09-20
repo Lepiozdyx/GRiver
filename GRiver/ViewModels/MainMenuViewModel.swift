@@ -22,15 +22,11 @@ class MainMenuViewModel: ObservableObject {
     @Published var hasSavedGame: Bool = false
     @Published var savedGameInfo: String = ""
     
-    @Published var showNewGameConfirm: Bool = false
     @Published var showLoadError: Bool = false
     @Published var showDeleteConfirm: Bool = false
     @Published var showManageProgress: Bool = false
     @Published var alertMessage: String = ""
     @Published var alertTitle: String = "Alert"
-    
-    @Published var isGameActive: Bool = false
-    @Published var gameStatus: GameStatus = .playing
     
     private let navigationSubject = PassthroughSubject<NavigationRequest, Never>()
     var navigationRequestPublisher: AnyPublisher<NavigationRequest, Never> {
@@ -47,34 +43,18 @@ class MainMenuViewModel: ObservableObject {
     
     func updateGameState(_ gameManager: GameStateManager?) {
         self.gameStateManager = gameManager
-        updateGameStatus()
     }
     
-    private func updateGameStatus() {
-        if let manager = gameStateManager {
-            gameStatus = manager.currentStatus
-            isGameActive = manager.isGameActive
-        } else {
-            gameStatus = .playing
-            isGameActive = false
-        }
+    func resetGameSession() {
+        self.gameStateManager = nil
     }
     
     func handlePlayAction() {
-        if hasSavedGame && !isGameActive {
+        if hasSavedGame {
             navigationSubject.send(.continueGame)
         } else {
-            if isGameActive && gameStateManager?.currentStatus == .playing {
-                showNewGameConfirm = true
-            } else {
-                navigationSubject.send(.startNewGame)
-            }
+            navigationSubject.send(.startNewGame)
         }
-    }
-    
-    func confirmNewGame() {
-        showNewGameConfirm = false
-        navigationSubject.send(.startNewGame)
     }
     
     func handleManageProgress() {
@@ -92,23 +72,11 @@ class MainMenuViewModel: ObservableObject {
         checkForSavedGame()
         showDeleteConfirm = false
         showManageProgress = false
-        resetGame()
-    }
-    
-    func pauseGame() {
-        gameStateManager?.pauseGame()
-        updateGameStatus()
-    }
-    
-    func resumeGame() {
-        gameStateManager?.resumeGame()
-        updateGameStatus()
+        resetGameSession()
     }
     
     func resetGame() {
         gameStateManager = nil
-        isGameActive = false
-        gameStatus = .playing
         checkForSavedGame()
     }
     
@@ -119,28 +87,11 @@ class MainMenuViewModel: ObservableObject {
     }
     
     var playButtonText: String {
-        if hasSavedGame && !isGameActive {
-            return "Continue Game"
-        } else {
-            return "New Game"
-        }
-    }
-    
-    var gameProgressSummary: String {
-        guard let gameManager = gameStateManager else {
-            return hasSavedGame ? "Saved game available" : "No active game"
-        }
-        
-        let state = gameManager.exportGameState()
-        let progress = Int(state.completionPercentage * 100)
-        let alertLevel = state.alertPercentage
-        
-        return "Progress: \(progress)%, Alert: \(alertLevel)%, Resources: \(state.totalResourceValue)"
+        return hasSavedGame ? "Continue Game" : "New Game"
     }
     
     func dismissAlert() {
         showLoadError = false
-        showNewGameConfirm = false
         showDeleteConfirm = false
         alertMessage = ""
         alertTitle = "Alert"

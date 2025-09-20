@@ -8,10 +8,6 @@ struct MainMenuView: View {
             
             titleSection
             
-            if viewModel.isGameActive {
-                gameStatusSection
-            }
-            
             mainButtonsSection
             
             if viewModel.hasSavedGame {
@@ -29,16 +25,6 @@ struct MainMenuView: View {
             }
         } message: {
             Text(viewModel.alertMessage)
-        }
-        .confirmationDialog("Start New Game?", isPresented: $viewModel.showNewGameConfirm) {
-            Button("New Game", role: .destructive) {
-                viewModel.confirmNewGame()
-            }
-            Button("Cancel", role: .cancel) {
-                viewModel.dismissAlert()
-            }
-        } message: {
-            Text("This will overwrite your current progress.")
         }
         .confirmationDialog("Delete Saved Game?", isPresented: $viewModel.showDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -67,41 +53,6 @@ struct MainMenuView: View {
                 .foregroundColor(.secondary)
         }
         .padding(.top, 40)
-    }
-    
-    private var gameStatusSection: some View {
-        VStack(spacing: 8) {
-            Text("Current Game")
-                .font(.headline)
-                .foregroundColor(.primary)
-            
-            Text(viewModel.gameProgressSummary)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            HStack {
-                Text("Status:")
-                    .foregroundColor(.secondary)
-                
-                Text(viewModel.gameStatus.displayName)
-                    .foregroundColor(gameStatusColor)
-                    .fontWeight(.medium)
-            }
-            .font(.caption)
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(8)
-    }
-    
-    private var gameStatusColor: Color {
-        switch viewModel.gameStatus {
-        case .playing: return .green
-        case .paused: return .orange
-        case .victory: return .blue
-        case .defeat: return .red
-        }
     }
     
     private var mainButtonsSection: some View {
@@ -159,11 +110,7 @@ struct MainMenuView: View {
     }
     
     private var playButtonIcon: String {
-        switch viewModel.gameStatus {
-        case .paused: return "play.circle"
-        case .playing: return "map"
-        default: return viewModel.hasSavedGame ? "arrow.clockwise.circle" : "plus.circle"
-        }
+        return viewModel.hasSavedGame ? "arrow.clockwise.circle" : "plus.circle"
     }
     
     private var savedGameInfoSection: some View {

@@ -89,8 +89,10 @@ class AppCoordinator: ObservableObject {
         if let gameManager = gameStateManager, gameManager.isGameActive {
             let gameState = gameManager.exportGameState()
             let _ = gameSaveManager.saveGame(gameState)
-            mainMenuViewModel.checkForSavedGame()
         }
+        
+        mainMenuViewModel.resetGameSession()
+        mainMenuViewModel.checkForSavedGame()
         
         withAnimation {
             currentFlow = .mainMenu
