@@ -19,19 +19,24 @@ class GameScene: SKScene {
     private var lastSelectedPOI: PointOfInterest?
     
     private var mapCamera: SKCameraNode?
-    private var lastPanPoint: CGPoint = .zero
     private var initialCameraScale: CGFloat = 1.0
     
     private let mapSize = CGSize(width: 1024, height: 768)
     private let minZoomScale: CGFloat = 0.5
     private let maxZoomScale: CGFloat = 2.0
     
+    private var activeTouches: [UITouch: CGPoint] = [:]
+    private var touchStartPositions: [UITouch: CGPoint] = [:]
+    private var lastPanPosition: CGPoint?
+    private var initialPinchDistance: CGFloat?
+    private var initialPinchScale: CGFloat?
+    
     override func didMove(to view: SKView) {
+        view.isMultipleTouchEnabled = true
         setupScene()
         setupCamera()
         setupBackground()
         setupPOIContainer()
-        setupGestureRecognizers()
         setupNotificationObservers()
         
         DispatchQueue.main.async {
@@ -101,25 +106,6 @@ class GameScene: SKScene {
         poiContainer = container
     }
     
-    private func setupGestureRecognizers() {
-        guard let view = view else { return }
-        
-        view.gestureRecognizers?.forEach { view.removeGestureRecognizer($0) }
-        
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
-        tapGesture.delegate = self
-        view.addGestureRecognizer(tapGesture)
-        
-        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
-        panGesture.minimumNumberOfTouches = 1
-        panGesture.delegate = self
-        view.addGestureRecognizer(panGesture)
-        
-        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
-        pinchGesture.delegate = self
-        view.addGestureRecognizer(pinchGesture)
-    }
-    
     private func setupNotificationObservers() {
         NotificationCenter.default.addObserver(
             self,
@@ -174,57 +160,132 @@ class GameScene: SKScene {
         }
     }
     
-    @objc private func handleTapGesture(_ gesture: UITapGestureRecognizer) {
-        guard gesture.state == .ended else { return }
-        guard let view = view else { return }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            activeTouches[touch] = location
+            touchStartPositions[touch] = location
+        }
         
-        let location = gesture.location(in: view)
-        let sceneLocation = convertPoint(fromView: location)
+        if activeTouches.count == 1 {
+            lastPanPosition = activeTouches.values.first
+            initialPinchDistance = nil
+            initialPinchScale = nil
+        } else if activeTouches.count == 2 {
+            let locations = Array(activeTouches.values)
+            initialPinchDistance = distance(from: locations[0], to: locations[1])
+            initialPinchScale = mapCamera?.xScale
+            lastPanPosition = nil
+        }
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            activeTouches[touch] = touch.location(in: self)
+        }
         
-        if let tappedPOI = findPOI(at: sceneLocation) {
-            selectPOI(tappedPOI, at: sceneLocation)
+        if activeTouches.count == 2 {
+            handlePinch()
+        } else if activeTouches.count == 1 {
+            handlePan()
+        }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            if let startPosition = touchStartPositions[touch],
+               let currentPosition = activeTouches[touch] {
+                let distance = hypot(currentPosition.x - startPosition.x, currentPosition.y - startPosition.y)
+                
+                if distance < 10 && activeTouches.count == 1 {
+                    handleTap(at: currentPosition)
+                }
+            }
+            
+            activeTouches.removeValue(forKey: touch)
+            touchStartPositions.removeValue(forKey: touch)
+        }
+        
+        if activeTouches.count == 1 {
+            lastPanPosition = activeTouches.values.first
+            initialPinchDistance = nil
+            initialPinchScale = nil
+        } else if activeTouches.count == 2 {
+            let locations = Array(activeTouches.values)
+            initialPinchDistance = distance(from: locations[0], to: locations[1])
+            initialPinchScale = mapCamera?.xScale
+            lastPanPosition = nil
+        } else {
+            lastPanPosition = nil
+            initialPinchDistance = nil
+            initialPinchScale = nil
+        }
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            activeTouches.removeValue(forKey: touch)
+            touchStartPositions.removeValue(forKey: touch)
+        }
+        
+        if activeTouches.isEmpty {
+            lastPanPosition = nil
+            initialPinchDistance = nil
+            initialPinchScale = nil
+        }
+    }
+    
+    private func handleTap(at location: CGPoint) {
+        if let tappedPOI = findPOI(at: location) {
+            selectPOI(tappedPOI, at: location)
         } else {
             deselectPOI()
         }
     }
     
-    @objc private func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
-        guard let view = view, let camera = mapCamera else { return }
+    private func handlePan() {
+        guard let camera = mapCamera,
+              activeTouches.count == 1,
+              let currentPosition = activeTouches.values.first else { return }
         
-        let translation = gesture.translation(in: view)
-        
-        switch gesture.state {
-        case .began:
-            lastPanPoint = camera.position
-            
-        case .changed:
-            let newPosition = CGPoint(
-                x: lastPanPoint.x - translation.y * camera.xScale,
-                y: lastPanPoint.y - translation.x * camera.yScale
+        if let lastPosition = lastPanPosition {
+            let delta = CGPoint(
+                x: currentPosition.x - lastPosition.x,
+                y: currentPosition.y - lastPosition.y
             )
-            camera.position = constrainCameraPosition(newPosition)
             
-        default:
-            break
+            let newPosition = CGPoint(
+                x: camera.position.x - delta.x,
+                y: camera.position.y - delta.y
+            )
+            
+            camera.position = constrainCameraPosition(newPosition)
         }
+        
+        lastPanPosition = currentPosition
     }
     
-    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
-        guard let camera = mapCamera else { return }
+    private func handlePinch() {
+        guard activeTouches.count == 2,
+              let camera = mapCamera,
+              let initialDistance = initialPinchDistance,
+              let initialScale = initialPinchScale else { return }
         
-        switch gesture.state {
-        case .changed:
-            let newScale = camera.xScale / gesture.scale
-            let constrainedScale = max(minZoomScale, min(maxZoomScale, newScale))
-            
-            camera.setScale(constrainedScale)
-            camera.position = constrainCameraPosition(camera.position)
-            
-            gesture.scale = 1.0
-            
-        default:
-            break
-        }
+        let locations = Array(activeTouches.values)
+        let currentDistance = distance(from: locations[0], to: locations[1])
+        
+        let scaleChange = initialDistance / currentDistance
+        let newScale = initialScale * scaleChange
+        let constrainedScale = max(minZoomScale, min(maxZoomScale, newScale))
+        
+        camera.setScale(constrainedScale)
+        camera.position = constrainCameraPosition(camera.position)
+    }
+    
+    private func distance(from point1: CGPoint, to point2: CGPoint) -> CGFloat {
+        let dx = point2.x - point1.x
+        let dy = point2.y - point1.y
+        return sqrt(dx * dx + dy * dy)
     }
     
     private func findPOI(at position: CGPoint) -> PointOfInterest? {
@@ -328,13 +389,6 @@ class GameScene: SKScene {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
-        view?.gestureRecognizers?.forEach { view?.removeGestureRecognizer($0) }
-    }
-}
-
-extension GameScene: UIGestureRecognizerDelegate {
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
     }
 }
 
