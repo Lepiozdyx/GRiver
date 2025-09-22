@@ -21,7 +21,6 @@ class GameScene: SKScene {
     private var mapCamera: SKCameraNode?
     private var initialCameraScale: CGFloat = 1.0
     
-    private let mapSize = CGSize(width: 1024, height: 768)
     private let minZoomScale: CGFloat = 0.5
     private let maxZoomScale: CGFloat = 2.0
     
@@ -33,6 +32,10 @@ class GameScene: SKScene {
     
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
+        
+        size = view.bounds.size
+        scaleMode = .resizeFill
+        
         setupScene()
         setupCamera()
         setupBackground()
@@ -46,7 +49,6 @@ class GameScene: SKScene {
     
     private func setupScene() {
         backgroundColor = SKColor.black
-        scaleMode = .aspectFit
     }
     
     private func setupCamera() {
@@ -56,13 +58,13 @@ class GameScene: SKScene {
         self.camera = camera
         self.mapCamera = camera
         
-        camera.position = CGPoint(x: mapSize.width / 2, y: mapSize.height / 2)
+        camera.position = CGPoint(x: size.width / 2, y: size.height / 2)
         initialCameraScale = 1.0
     }
     
     private func setupBackground() {
-        let background = SKSpriteNode(color: SKColor.systemGray6, size: mapSize)
-        background.position = CGPoint(x: mapSize.width / 2, y: mapSize.height / 2)
+        let background = SKSpriteNode(color: SKColor.systemGray6, size: size)
+        background.position = CGPoint(x: size.width / 2, y: size.height / 2)
         background.zPosition = -1
         addChild(background)
         backgroundNode = background
@@ -74,11 +76,11 @@ class GameScene: SKScene {
         let gridSize: CGFloat = 50
         let lineWidth: CGFloat = 0.5
         
-        for x in stride(from: 0, through: mapSize.width, by: gridSize) {
+        for x in stride(from: 0, through: size.width, by: gridSize) {
             let line = SKShapeNode()
             let path = CGMutablePath()
             path.move(to: CGPoint(x: x, y: 0))
-            path.addLine(to: CGPoint(x: x, y: mapSize.height))
+            path.addLine(to: CGPoint(x: x, y: size.height))
             line.path = path
             line.strokeColor = SKColor.gray.withAlphaComponent(0.3)
             line.lineWidth = lineWidth
@@ -86,11 +88,11 @@ class GameScene: SKScene {
             addChild(line)
         }
         
-        for y in stride(from: 0, through: mapSize.height, by: gridSize) {
+        for y in stride(from: 0, through: size.height, by: gridSize) {
             let line = SKShapeNode()
             let path = CGMutablePath()
             path.move(to: CGPoint(x: 0, y: y))
-            path.addLine(to: CGPoint(x: mapSize.width, y: y))
+            path.addLine(to: CGPoint(x: size.width, y: y))
             line.path = path
             line.strokeColor = SKColor.gray.withAlphaComponent(0.3)
             line.lineWidth = lineWidth
@@ -327,9 +329,9 @@ class GameScene: SKScene {
         let viewSize = CGSize(width: size.width * scale, height: size.height * scale)
         
         let minX = viewSize.width / 2
-        let maxX = mapSize.width - viewSize.width / 2
+        let maxX = size.width - viewSize.width / 2
         let minY = viewSize.height / 2
-        let maxY = mapSize.height - viewSize.height / 2
+        let maxY = size.height - viewSize.height / 2
         
         return CGPoint(
             x: max(minX, min(maxX, position.x)),
@@ -354,7 +356,7 @@ class GameScene: SKScene {
     func resetCameraPosition(animated: Bool = true) {
         guard let camera = mapCamera else { return }
         
-        let centerPosition = CGPoint(x: mapSize.width / 2, y: mapSize.height / 2)
+        let centerPosition = CGPoint(x: size.width / 2, y: size.height / 2)
         
         if animated {
             let moveAction = SKAction.move(to: centerPosition, duration: 0.5)
