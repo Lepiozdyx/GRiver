@@ -14,12 +14,21 @@ class GameSceneViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     init() {
-        
+        setupNotificationObservers()
     }
     
     convenience init(gameStateManager: GameStateManager?) {
         self.init()
         setGameStateManager(gameStateManager)
+    }
+    
+    private func setupNotificationObservers() {
+        NotificationCenter.default.publisher(for: .sceneDidBecomeReady)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleSceneReady()
+            }
+            .store(in: &cancellables)
     }
     
     func setGameStateManager(_ manager: GameStateManager?) {
@@ -32,9 +41,9 @@ class GameSceneViewModel: ObservableObject {
         
         self.gameStateManager = manager
         
-        if scene == nil || !isSceneReady {
+        if scene == nil {
             initializeScene()
-        } else {
+        } else if isSceneReady {
             updateMapData()
         }
     }
@@ -45,8 +54,6 @@ class GameSceneViewModel: ObservableObject {
             return
         }
         
-        isSceneReady = false
-        
         let newScene = GameScene()
         newScene.gameDelegate = self
         newScene.size = CGSize(width: 1024, height: 768)
@@ -56,11 +63,11 @@ class GameSceneViewModel: ObservableObject {
         newScene.setMapManager(mapManager)
         
         self.scene = newScene
-        self.isSceneReady = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            newScene.updatePOIs()
-        }
+    }
+    
+    private func handleSceneReady() {
+        isSceneReady = true
+        updateMapData()
     }
     
     var pointsOfInterest: [PointOfInterest] {

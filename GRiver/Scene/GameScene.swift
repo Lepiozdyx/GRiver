@@ -33,6 +33,10 @@ class GameScene: SKScene {
         setupPOIContainer()
         setupGestureRecognizers()
         setupNotificationObservers()
+        
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .sceneDidBecomeReady, object: self)
+        }
     }
     
     private func setupScene() {
@@ -102,16 +106,18 @@ class GameScene: SKScene {
         
         view.gestureRecognizers?.forEach { view.removeGestureRecognizer($0) }
         
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
+        tapGesture.delegate = self
+        view.addGestureRecognizer(tapGesture)
+        
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
         panGesture.minimumNumberOfTouches = 1
-        panGesture.maximumNumberOfTouches = 1
+        panGesture.delegate = self
         view.addGestureRecognizer(panGesture)
         
         let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
+        pinchGesture.delegate = self
         view.addGestureRecognizer(pinchGesture)
-        
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
-        view.addGestureRecognizer(tapGesture)
     }
     
     private func setupNotificationObservers() {
@@ -168,6 +174,20 @@ class GameScene: SKScene {
         }
     }
     
+    @objc private func handleTapGesture(_ gesture: UITapGestureRecognizer) {
+        guard gesture.state == .ended else { return }
+        guard let view = view else { return }
+        
+        let location = gesture.location(in: view)
+        let sceneLocation = convertPoint(fromView: location)
+        
+        if let tappedPOI = findPOI(at: sceneLocation) {
+            selectPOI(tappedPOI, at: sceneLocation)
+        } else {
+            deselectPOI()
+        }
+    }
+    
     @objc private func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         guard let view = view, let camera = mapCamera else { return }
         
@@ -204,19 +224,6 @@ class GameScene: SKScene {
             
         default:
             break
-        }
-    }
-    
-    @objc private func handleTapGesture(_ gesture: UITapGestureRecognizer) {
-        guard let view = view else { return }
-        
-        let location = gesture.location(in: view)
-        let sceneLocation = convertPoint(fromView: location)
-        
-        if let tappedPOI = findPOI(at: sceneLocation) {
-            selectPOI(tappedPOI, at: sceneLocation)
-        } else {
-            deselectPOI()
         }
     }
     
@@ -322,6 +329,12 @@ class GameScene: SKScene {
     deinit {
         NotificationCenter.default.removeObserver(self)
         view?.gestureRecognizers?.forEach { view?.removeGestureRecognizer($0) }
+    }
+}
+
+extension GameScene: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
     }
 }
 
@@ -436,4 +449,5 @@ class POINode: SKSpriteNode {
 
 extension Notification.Name {
     static let poiUpdated = Notification.Name("poiUpdated")
+    static let sceneDidBecomeReady = Notification.Name("sceneDidBecomeReady")
 }

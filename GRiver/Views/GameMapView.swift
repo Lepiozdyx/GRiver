@@ -7,10 +7,11 @@ struct GameMapView: View {
     
     var body: some View {
         ZStack {
-            if viewModel.isSceneReady, let scene = viewModel.scene {
+            if let scene = viewModel.scene {
                 SpriteView(scene: scene)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black)
+                    .ignoresSafeArea()
                     .onReceive(NotificationCenter.default.publisher(for: .poiSelected)) { notification in
                         if let userInfo = notification.userInfo,
                            let poi = userInfo["poi"] as? PointOfInterest,
@@ -22,8 +23,12 @@ struct GameMapView: View {
                         handlePOIDeselected()
                     }
             } else {
+                Color.black.ignoresSafeArea()
+            }
+            
+            if !viewModel.isSceneReady {
                 ZStack {
-                    Color.black
+                    Color.black.opacity(0.8)
                         .ignoresSafeArea()
                     
                     VStack(spacing: 16) {
@@ -56,17 +61,15 @@ struct GameMapView: View {
         .navigationBarHidden(true)
         .statusBarHidden()
         .onAppear {
-            ensureSceneInitialization()
+            initializeScene()
         }
     }
     
-    private func ensureSceneInitialization() {
-        if !viewModel.isSceneReady && coordinator.isGameActive {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if !viewModel.isSceneReady {
-                    viewModel.setGameStateManager(coordinator.gameStateManager)
-                }
-            }
+    private func initializeScene() {
+        guard coordinator.isGameActive else { return }
+        
+        if !viewModel.isSceneReady {
+            viewModel.setGameStateManager(coordinator.gameStateManager)
         }
     }
     
