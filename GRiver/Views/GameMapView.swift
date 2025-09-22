@@ -27,7 +27,7 @@ struct GameMapView: View {
             
             if !viewModel.isSceneReady {
                 ZStack {
-                    Color.black.opacity(0.8)
+                    Color.black.opacity(0.7)
                         .ignoresSafeArea()
                     
                     VStack(spacing: 16) {
@@ -35,8 +35,7 @@ struct GameMapView: View {
                             .scaleEffect(1.5)
                         
                         Text("Loading Tactical Map...")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
+                            .laborFont(16)
                     }
                 }
             }
@@ -74,30 +73,38 @@ struct GameMapView: View {
     
     private var mapControl: some View {
         HStack(alignment: .top) {
-            Button("Menu") {
+            Button {
                 coordinator.navigateToMainMenu()
+            } label: {
+                Image(.squareButton)
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .overlay {
+                        Image(.homeIcon)
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                    }
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .foregroundColor(.white)
             
             Spacer()
             
             Text(viewModel.mapStatistics)
-                .font(.caption)
-                .foregroundColor(.white)
-                .padding(8)
-                .background(Color.black.opacity(0.7))
-                .cornerRadius(8)
+                .laborFont(10)
             
             Spacer()
             
-            Button("Base") {
+            Button {
                 coordinator.showBaseManagement()
+            } label: {
+                Image(.rectangleButton)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 150)
+                    .overlay {
+                        Text("Warehouse")
+                            .laborFont(16)
+                    }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .foregroundColor(.white)
         }
         .padding()
     }
