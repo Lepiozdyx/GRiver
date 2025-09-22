@@ -21,8 +21,10 @@ class GameScene: SKScene {
     private var mapCamera: SKCameraNode?
     private var initialCameraScale: CGFloat = 1.0
     
-    private let minZoomScale: CGFloat = 0.5
-    private let maxZoomScale: CGFloat = 2.0
+    private var minZoomScale: CGFloat = 0.5
+    private var maxZoomScale: CGFloat = 2.0
+    
+    private var mapSize: CGSize = .zero
     
     private var activeTouches: [UITouch: CGPoint] = [:]
     private var touchStartPositions: [UITouch: CGPoint] = [:]
@@ -53,13 +55,9 @@ class GameScene: SKScene {
     
     private func setupCamera() {
         let camera = SKCameraNode()
-        camera.setScale(1.0)
         addChild(camera)
         self.camera = camera
         self.mapCamera = camera
-        
-        camera.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        initialCameraScale = 1.0
     }
     
     private func setupBackground() {
@@ -73,12 +71,40 @@ class GameScene: SKScene {
         let scaleY = sceneSize.height / imageSize.height
         let scale = max(scaleX, scaleY)
         
-        background.size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
-        background.position = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
+        mapSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        background.size = mapSize
+        background.position = CGPoint(x: mapSize.width / 2, y: mapSize.height / 2)
         background.zPosition = -1
         
         addChild(background)
         backgroundNode = background
+        
+        calculateZoomLimits()
+        setupInitialCameraPosition()
+    }
+    
+    private func calculateZoomLimits() {
+        let scaleX = size.width / mapSize.width
+        let scaleY = size.height / mapSize.height
+        let minScale = max(scaleX, scaleY)
+        
+        minZoomScale = 0.5
+        maxZoomScale = minScale
+        initialCameraScale = maxZoomScale
+    }
+    
+    private func setupInitialCameraPosition() {
+        guard let camera = mapCamera else { return }
+        
+        camera.setScale(initialCameraScale)
+        
+        let viewWidth = size.width * initialCameraScale
+        let viewHeight = size.height * initialCameraScale
+        
+        let initialX = viewWidth / 2
+        let initialY = mapSize.height - viewHeight / 2
+        
+        camera.position = CGPoint(x: initialX, y: initialY)
     }
     
     private func setupPOIContainer() {
@@ -306,12 +332,13 @@ class GameScene: SKScene {
         guard let camera = mapCamera else { return position }
         
         let scale = camera.xScale
-        let viewSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let viewWidth = size.width * scale
+        let viewHeight = size.height * scale
         
-        let minX = viewSize.width / 2
-        let maxX = size.width - viewSize.width / 2
-        let minY = viewSize.height / 2
-        let maxY = size.height - viewSize.height / 2
+        let minX = viewWidth / 2
+        let maxX = mapSize.width - viewWidth / 2
+        let minY = viewHeight / 2
+        let maxY = mapSize.height - viewHeight / 2
         
         return CGPoint(
             x: max(minX, min(maxX, position.x)),
@@ -336,7 +363,15 @@ class GameScene: SKScene {
     func resetCameraPosition(animated: Bool = true) {
         guard let camera = mapCamera else { return }
         
-        let centerPosition = CGPoint(x: size.width / 2, y: size.height / 2)
+        camera.setScale(initialCameraScale)
+        
+        let viewWidth = size.width * initialCameraScale
+        let viewHeight = size.height * initialCameraScale
+        
+        let initialX = viewWidth / 2
+        let initialY = mapSize.height - viewHeight / 2
+        
+        let centerPosition = CGPoint(x: initialX, y: initialY)
         
         if animated {
             let moveAction = SKAction.move(to: centerPosition, duration: 0.5)
