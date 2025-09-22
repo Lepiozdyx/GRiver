@@ -149,7 +149,7 @@ class GameSaveManager: ObservableObject {
         let progress = Int(gameState.completionPercentage * 100)
         let alertLevel = gameState.alertPercentage
         
-        saveInfo = "Progress: \(progress)%, Alert: \(alertLevel)%, \(dateFormatter.string(from: date))"
+        saveInfo = "Progress: \(progress)%, Alert: \(alertLevel)%"
     }
     
     func validateSave() -> Bool {
