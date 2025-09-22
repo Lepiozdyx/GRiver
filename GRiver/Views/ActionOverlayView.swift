@@ -387,24 +387,17 @@ struct ActionOverlayContainer: View {
     }
 }
 
-// MARK: - Preview
 #Preview {
-    @StateObject var testViewModel = ActionOverlayViewModel()
-    
-    return ZStack {
+    ZStack {
         Color.gray.opacity(0.3)
             .ignoresSafeArea()
         
         ActionOverlayView(
-            viewModel: testViewModel,
+            viewModel: ActionOverlayViewModel(),
             poi: PointOfInterest(type: .base, position: CGPoint(x: 100, y: 100)),
-            position: CGPoint(x: 200, y: 300),
+            position: CGPoint(x: 300, y: 200),
             onCancel: {},
             onActionExecuted: { _ in }
         )
-    }
-    .onAppear {
-        // Setup test data
-        testViewModel.setGameStateManager(GameStateManager())
     }
 }

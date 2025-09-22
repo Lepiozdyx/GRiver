@@ -29,29 +29,17 @@ struct GameMapView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         
                         Text("Loading Tactical Map...")
                             .font(.subheadline)
                             .foregroundColor(.white)
-                        
-                        Text("Initializing POI data...")
-                            .font(.caption)
-                            .foregroundColor(.gray)
                     }
                 }
             }
             
             if viewModel.isSceneReady {
                 VStack {
-                    HStack(alignment: .top) {
-                        mapStatsOverlay
-                        
-                        Spacer()
-                        
-                        mapControlButtons
-                    }
-                    .padding()
+                    mapControl
                     
                     Spacer()
                     
@@ -82,30 +70,25 @@ struct GameMapView: View {
         }
     }
     
-    private var mapStatsOverlay: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("MAP STATUS")
-                .font(.caption2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text(viewModel.mapStatistics)
-                .font(.caption)
-                .foregroundColor(.white)
-        }
-        .padding(8)
-        .background(Color.black.opacity(0.7))
-        .cornerRadius(8)
-    }
-    
-    private var mapControlButtons: some View {
-        VStack(spacing: 8) {
+    private var mapControl: some View {
+        HStack(alignment: .top) {
             Button("Menu") {
                 coordinator.navigateToMainMenu()
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
             .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text(viewModel.mapStatistics)
+                .font(.caption)
+                .foregroundColor(.white)
+                .padding(8)
+                .background(Color.black.opacity(0.7))
+                .cornerRadius(8)
+            
+            Spacer()
             
             Button("Base") {
                 coordinator.showBaseManagement()
@@ -114,6 +97,7 @@ struct GameMapView: View {
             .controlSize(.small)
             .foregroundColor(.white)
         }
+        .padding()
     }
     
     private var bottomOverlay: some View {
@@ -181,23 +165,26 @@ struct GameMapView: View {
     }
     
     private var mapInstructions: some View {
-        VStack(spacing: 4) {
-            Text("TACTICAL MAP")
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text("Tap POI to view details")
-                .font(.caption2)
-                .foregroundColor(.gray)
-            
-            Text("Pinch to zoom • Drag to pan")
-                .font(.caption2)
-                .foregroundColor(.gray)
+        HStack {
+            Spacer()
+            VStack(spacing: 4) {
+                Text("TACTICAL MAP")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("Tap POI to view details")
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                
+                Text("Pinch to zoom • Drag to pan")
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            .padding(12)
+            .background(Color.black.opacity(0.7))
+            .cornerRadius(8)
         }
-        .padding(12)
-        .background(Color.black.opacity(0.7))
-        .cornerRadius(8)
     }
     
     private var baseManagementOverlay: some View {
