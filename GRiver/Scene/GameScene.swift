@@ -63,42 +63,22 @@ class GameScene: SKScene {
     }
     
     private func setupBackground() {
-        let background = SKSpriteNode(color: SKColor.systemGray6, size: size)
-        background.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        let mapTexture = SKTexture(imageNamed: "map1")
+        let background = SKSpriteNode(texture: mapTexture)
+        
+        let imageSize = mapTexture.size()
+        let sceneSize = size
+        
+        let scaleX = sceneSize.width / imageSize.width
+        let scaleY = sceneSize.height / imageSize.height
+        let scale = max(scaleX, scaleY)
+        
+        background.size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        background.position = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
         background.zPosition = -1
+        
         addChild(background)
         backgroundNode = background
-        
-        addGridPattern()
-    }
-    
-    private func addGridPattern() {
-        let gridSize: CGFloat = 50
-        let lineWidth: CGFloat = 0.5
-        
-        for x in stride(from: 0, through: size.width, by: gridSize) {
-            let line = SKShapeNode()
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: x, y: 0))
-            path.addLine(to: CGPoint(x: x, y: size.height))
-            line.path = path
-            line.strokeColor = SKColor.gray.withAlphaComponent(0.3)
-            line.lineWidth = lineWidth
-            line.zPosition = -0.5
-            addChild(line)
-        }
-        
-        for y in stride(from: 0, through: size.height, by: gridSize) {
-            let line = SKShapeNode()
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: 0, y: y))
-            path.addLine(to: CGPoint(x: size.width, y: y))
-            line.path = path
-            line.strokeColor = SKColor.gray.withAlphaComponent(0.3)
-            line.lineWidth = lineWidth
-            line.zPosition = -0.5
-            addChild(line)
-        }
     }
     
     private func setupPOIContainer() {
