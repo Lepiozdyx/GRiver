@@ -10,7 +10,6 @@ struct GameMapView: View {
             if let scene = viewModel.scene {
                 SpriteView(scene: scene)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black)
                     .ignoresSafeArea()
                     .onReceive(NotificationCenter.default.publisher(for: .poiSelected)) { notification in
                         if let userInfo = notification.userInfo,

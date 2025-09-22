@@ -50,7 +50,7 @@ struct MainMenuView: View {
                 Image(.rectangleButton)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 300)
+                    .frame(maxWidth: 250)
                     .overlay {
                         Text(viewModel.playButtonText)
                             .laborFont(24)

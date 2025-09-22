@@ -87,7 +87,7 @@ class MainMenuViewModel: ObservableObject {
     }
     
     var playButtonText: String {
-        return hasSavedGame ? "Continue Game" : "New Game"
+        return hasSavedGame ? "Continue" : "Play"
     }
     
     func dismissAlert() {
