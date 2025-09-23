@@ -14,14 +14,10 @@ struct PlayerBaseView: View {
                         .offset(y: -30)
                 }
             
-            HStack {
+            HStack(spacing: 100) {
                 buildingsSection
                 
-                Spacer()
-                
-                unitRecruitmentSection
-                
-                supplyPurchaseSection
+                supplementsSection
             }
             .padding()
         }
@@ -90,9 +86,9 @@ struct PlayerBaseView: View {
             }
     }
     
-    // MARK: - Section
+    // MARK: - Buildings Section
     private var buildingsSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             buildingRow(
                 title: "Barracks",
                 image: .warehouse,
@@ -127,185 +123,214 @@ struct PlayerBaseView: View {
         canUpgrade: Bool,
         upgradeAction: @escaping () -> Void
     ) -> some View {
-        HStack {
-            VStack(spacing: 4) {
-                Text(title)
-                    .laborFont(10)
+        VStack(spacing: 4) {
+            Text(title)
+                .laborFont(14)
+            
+            HStack(spacing: 4) {
+                Image(image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 90)
                 
-                HStack(spacing: 4) {
-                    Image(image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 90)
-                    
-                    Image(type)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 25)
-                        .overlay {
-                            Image(systemName: "plus")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                }
-                
-                Text("Level \(level)/\(maxLevel)")
-                    .laborFont(10)
-                
-                Button {
-                    upgradeAction()
-                } label: {
-                    Image(.rectangleButton)
-                        .resizable()
-                        .frame(width: 100, height: 40)
-                        .overlay {
-                            if level < maxLevel {
-                                HStack(spacing: 2) {
-                                    Image(.coin)
-                                        .resizable()
-                                        .frame(width: 20, height: 20)
-                                    
-                                    Text("\(upgradeCost.money)")
-                                        .laborFont(12)
-                                    
-                                    Image(.coin)
-                                        .resizable()
-                                        .frame(width: 20, height: 20)
-                                }
-                            } else {
-                                Text("MAX")
-                                    .laborFont(14)
-                            }
-                        }
-                }
-                .disabled(!canUpgrade)
+                Image(type)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 25)
+                    .overlay {
+                        Image(systemName: "plus")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
             }
+            
+            Text("Level \(level)/\(maxLevel)")
+                .laborFont(10)
+            
+            Button {
+                upgradeAction()
+            } label: {
+                Image(.rectangleButton)
+                    .resizable()
+                    .frame(width: 100, height: 40)
+                    .overlay {
+                        if level < maxLevel {
+                            HStack(spacing: 2) {
+                                Image(.coin)
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                                
+                                Text("\(upgradeCost.money)")
+                                    .laborFont(12)
+                                
+                                Image(.coin)
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                            }
+                        } else {
+                            Text("MAX")
+                                .laborFont(14)
+                        }
+                    }
+            }
+            .disabled(!canUpgrade)
         }
     }
     
-    // MARK: - Section
-    private var unitRecruitmentSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Unit")
-                .laborFont(14)
-            
-            HStack(spacing: 6) {
-                Button("-") {
+    // MARK: - Supplements Section
+    private var supplementsSection: some View {
+        HStack(spacing: 30) {
+            supplementsRow(
+                title: "Units",
+                image: .units,
+                amount: viewModel.unitsToBuy,
+                cost: viewModel.getUnitRecruitmentCost(),
+                canAfford: viewModel.canAffordUnits,
+                maxAmount: min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits()),
+                onDecrease: {
                     if viewModel.unitsToBuy > 1 {
                         viewModel.setUnitsToBuy(viewModel.unitsToBuy - 1)
                     }
-                }
-                .disabled(viewModel.unitsToBuy <= 1)
-                .controlSize(.mini)
-                
-                Text("\(viewModel.unitsToBuy)")
-                    .frame(width: 30)
-                    .font(.caption)
-                    .padding(.horizontal, 4)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(2)
-                
-                Button("+") {
+                },
+                onIncrease: {
                     let maxPossible = min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits())
                     if viewModel.unitsToBuy < maxPossible {
                         viewModel.setUnitsToBuy(viewModel.unitsToBuy + 1)
                     }
+                },
+                onPurchase: {
+                    viewModel.recruitUnits()
                 }
-                .disabled(viewModel.unitsToBuy >= min(viewModel.getMaxAffordableUnits(), viewModel.getMaxRecruitableUnits()))
-                .controlSize(.mini)
-            }
+            )
             
-            let unitCost = viewModel.getUnitRecruitmentCost()
-            Text("Cost: 💰\(unitCost.money) 🍖\(unitCost.food)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            supplementsRow(
+                title: "Ammo",
+                image: .ammo,
+                amount: viewModel.ammoToBuy,
+                cost: Resource(money: viewModel.ammoToBuy * 5),
+                canAfford: viewModel.canAffordSupplies && viewModel.ammoToBuy > 0,
+                maxAmount: viewModel.getMaxAffordableAmmo(),
+                onDecrease: {
+                    if viewModel.ammoToBuy > 0 {
+                        viewModel.setAmmoToBuy(viewModel.ammoToBuy - 1)
+                    }
+                },
+                onIncrease: {
+                    if viewModel.ammoToBuy < viewModel.getMaxAffordableAmmo() {
+                        viewModel.setAmmoToBuy(viewModel.ammoToBuy + 1)
+                    }
+                },
+                onPurchase: {
+                    viewModel.purchaseSupplies()
+                }
+            )
             
-            Button("Recruit Units") {
-                viewModel.recruitUnits()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .disabled(!viewModel.canAffordUnits)
+            supplementsRow(
+                title: "Food",
+                image: .food,
+                amount: viewModel.foodToBuy,
+                cost: Resource(money: viewModel.foodToBuy * 2),
+                canAfford: viewModel.canAffordSupplies && viewModel.foodToBuy > 0,
+                maxAmount: viewModel.getMaxAffordableFood(),
+                onDecrease: {
+                    if viewModel.foodToBuy > 0 {
+                        viewModel.setFoodToBuy(viewModel.foodToBuy - 1)
+                    }
+                },
+                onIncrease: {
+                    if viewModel.foodToBuy < viewModel.getMaxAffordableFood() {
+                        viewModel.setFoodToBuy(viewModel.foodToBuy + 1)
+                    }
+                },
+                onPurchase: {
+                    viewModel.purchaseSupplies()
+                }
+            )
         }
     }
     
-    private var supplyPurchaseSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Ammunition")
+    private func supplementsRow(
+        title: String,
+        image: ImageResource,
+        amount: Int,
+        cost: Resource,
+        canAfford: Bool,
+        maxAmount: Int,
+        onDecrease: @escaping () -> Void,
+        onIncrease: @escaping () -> Void,
+        onPurchase: @escaping () -> Void
+    ) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
                 .laborFont(14)
             
-            VStack(spacing: 6) {
-                HStack {
-                    HStack(spacing: 4) {
-                        Button("-") {
-                            if viewModel.ammoToBuy > 0 {
-                                viewModel.setAmmoToBuy(viewModel.ammoToBuy - 1)
-                            }
-                        }
-                        .disabled(viewModel.ammoToBuy <= 0)
-                        .controlSize(.mini)
-                        
-                        Text("\(viewModel.ammoToBuy)")
-                            .frame(width: 30)
-                            .font(.caption)
-                            .padding(.horizontal, 4)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(2)
-                        
-                        Button("+") {
-                            if viewModel.ammoToBuy < viewModel.getMaxAffordableAmmo() {
-                                viewModel.setAmmoToBuy(viewModel.ammoToBuy + 1)
-                            }
-                        }
-                        .disabled(viewModel.ammoToBuy >= viewModel.getMaxAffordableAmmo())
-                        .controlSize(.mini)
-                    }
+            Image(.box)
+                .resizable()
+                .frame(width: 80, height: 80)
+                .overlay {
+                    Image(image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 25)
                 }
+            
+            HStack(spacing: 20) {
+                Button {
+                    onDecrease()
+                } label: {
+                    Image(.circleButton)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30)
+                        .overlay {
+                            Image(systemName: "minus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                }
+                .disabled(amount <= (title == "Units" ? 1 : 0))
                 
-                HStack {
-                    Text("Provision")
-                        .laborFont(14)
-                    
-                    HStack(spacing: 4) {
-                        Button("-") {
-                            if viewModel.foodToBuy > 0 {
-                                viewModel.setFoodToBuy(viewModel.foodToBuy - 1)
-                            }
+                Text("\(amount)")
+                    .laborFont(22)
+                
+                Button {
+                    onIncrease()
+                } label: {
+                    Image(.circleButton)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30)
+                        .overlay {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        .disabled(viewModel.foodToBuy <= 0)
-                        .controlSize(.mini)
-                        
-                        Text("\(viewModel.foodToBuy)")
-                            .frame(width: 30)
-                            .font(.caption)
-                            .padding(.horizontal, 4)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(2)
-                        
-                        Button("+") {
-                            if viewModel.foodToBuy < viewModel.getMaxAffordableFood() {
-                                viewModel.setFoodToBuy(viewModel.foodToBuy + 1)
-                            }
-                        }
-                        .disabled(viewModel.foodToBuy >= viewModel.getMaxAffordableFood())
-                        .controlSize(.mini)
-                    }
                 }
+                .disabled(amount >= maxAmount)
             }
             
-            let supplyCost = viewModel.getSupplyCost()
-            if supplyCost.money > 0 {
-                Text("Total: 💰\(supplyCost.money)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+            Button {
+                onPurchase()
+            } label: {
+                Image(.rectangleButton)
+                    .resizable()
+                    .frame(width: 120, height: 40)
+                    .overlay {
+                        HStack(spacing: 2) {
+                            Image(.coin)
+                                .resizable()
+                                .frame(width: 15, height: 15)
+                            
+                            Text("\(cost.money)")
+                                .laborFont(10)
+                            
+                            Image(.coin)
+                                .resizable()
+                                .frame(width: 15, height: 15)
+                        }
+                    }
             }
-            
-            Button("Purchase Supplies") {
-                viewModel.purchaseSupplies()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .disabled(!viewModel.canAffordSupplies || (viewModel.ammoToBuy == 0 && viewModel.foodToBuy == 0))
+            .disabled(!canAfford)
         }
     }
 }

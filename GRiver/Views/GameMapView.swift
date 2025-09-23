@@ -212,10 +212,6 @@ struct GameMapView: View {
                 coordinator.hideBaseManagement()
             }
             .environmentObject(coordinator.getBaseViewModel())
-            .frame(maxWidth: min(UIScreen.main.bounds.width * 0.9, 500))
-            .frame(maxHeight: UIScreen.main.bounds.height * 0.75)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
             .shadow(radius: 10)
         }
     }
