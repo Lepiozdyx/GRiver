@@ -42,7 +42,7 @@ struct GameMapView: View {
             
             if viewModel.isSceneReady {
                 VStack {
-                    mapControl
+                    mapTopBarControl
                     
                     Spacer()
                     
@@ -71,7 +71,7 @@ struct GameMapView: View {
         }
     }
     
-    private var mapControl: some View {
+    private var mapTopBarControl: some View {
         HStack(alignment: .top) {
             Button {
                 coordinator.navigateToMainMenu()
@@ -92,19 +92,6 @@ struct GameMapView: View {
                 .laborFont(10)
             
             Spacer()
-            
-            Button {
-                coordinator.showBaseManagement()
-            } label: {
-                Image(.rectangleButton)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 150)
-                    .overlay {
-                        Text("Warehouse")
-                            .laborFont(16)
-                    }
-            }
         }
         .padding()
     }
@@ -115,8 +102,23 @@ struct GameMapView: View {
                 selectedPOIInfo(selectedPOI)
                     .padding(.bottom, 20)
             } else {
-                mapInstructions
-                    .padding(.bottom, 20)
+                HStack {
+                    Spacer()
+                    
+                    Button {
+                        coordinator.showBaseManagement()
+                    } label: {
+                        Image(.rectangleButton)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: 150)
+                            .overlay {
+                                Text("Warehouse")
+                                    .laborFont(16)
+                            }
+                    }
+                }
+                .padding()
             }
         }
     }
@@ -125,75 +127,77 @@ struct GameMapView: View {
         VStack(spacing: 8) {
             VStack(spacing: 4) {
                 Text(poi.type.displayName)
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .laborFont(14)
                 
                 Text("Status: \(poi.status.displayName)")
-                    .font(.caption)
-                    .foregroundColor(poi.isOperational ? .green : .red)
+                    .laborFont(12 ,color: poi.isOperational ? .green : .red)
                 
                 Text("Defense: \(poi.totalDefense) | Units: \(poi.currentUnits)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                    .laborFont(12)
                 
                 if poi.defenseBonus > 0 {
                     Text("Alert Bonus: +\(poi.defenseBonus)")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
+                        .laborFont(10)
                 }
             }
             
-            HStack(spacing: 12) {
-                Button("Focus") {
+            HStack(spacing: 14) {
+                Button {
                     viewModel.focusOnPOI(poi)
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(.circleButton)
+                            .resizable()
+                            .frame(width: 35, height: 35)
+                            .overlay {
+                                Image(systemName: "eye")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white)
+                            }
+                        
+                        Text("Focus")
+                            .laborFont(10)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
                 
                 if poi.isOperational {
-                    Button("Select") {
+                    Button {
                         selectPOIForAction(poi)
+                    } label: {
+                        Image(.rectangleButton)
+                            .resizable()
+                            .frame(width: 150, height: 50)
+                            .overlay {
+                                Text("Select")
+                                    .laborFont(10)
+                            }
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .foregroundColor(.green)
                 }
                 
-                Button("Close") {
+                Button {
                     viewModel.deselectPOI()
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(.circleButton)
+                            .resizable()
+                            .frame(width: 35, height: 35)
+                            .overlay {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white)
+                            }
+                        
+                        Text("Close")
+                            .laborFont(10)
+                    }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .foregroundColor(.white)
             }
         }
-        .padding(16)
-        .background(Color.black.opacity(0.8))
-        .cornerRadius(12)
-        .shadow(radius: 4)
-    }
-    
-    private var mapInstructions: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 4) {
-                Text("TACTICAL MAP")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                Text("Tap POI to view details")
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                
-                Text("Pinch to zoom • Drag to pan")
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
-            .padding(12)
-            .background(Color.black.opacity(0.7))
-            .cornerRadius(8)
-        }
+        .padding()
+        .background(
+            Image(.frame1)
+                .resizable()
+        )
     }
     
     private var baseManagementOverlay: some View {
@@ -204,12 +208,9 @@ struct GameMapView: View {
                     coordinator.hideBaseManagement()
                 }
             
-            PlayerBaseView(
-                isOverlay: true,
-                onClose: {
-                    coordinator.hideBaseManagement()
-                }
-            )
+            PlayerBaseView {
+                coordinator.hideBaseManagement()
+            }
             .environmentObject(coordinator.getBaseViewModel())
             .frame(maxWidth: min(UIScreen.main.bounds.width * 0.9, 500))
             .frame(maxHeight: UIScreen.main.bounds.height * 0.75)

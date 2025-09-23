@@ -20,7 +20,6 @@ struct ContentView: View {
                     ActionOverlayView(
                         viewModel: coordinator.getActionOverlayViewModel(),
                         poi: poi,
-                        position: coordinator.overlayPosition,
                         onCancel: {
                             coordinator.hideActionOverlay()
                         },

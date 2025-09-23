@@ -26,15 +26,6 @@ enum ActionType: String, CaseIterable, Codable {
         }
     }
     
-    var icon: String {
-        switch self {
-        case .raid: return "⚡"
-        case .robbery: return "💰"
-        case .capture: return "🏴"
-        case .destruction: return "💥"
-        }
-    }
-    
     // MARK: - Combat Properties
     var successCoefficient: Double {
         switch self {

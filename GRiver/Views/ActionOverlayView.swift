@@ -5,7 +5,7 @@ struct ActionOverlayView: View {
     @ObservedObject var viewModel: ActionOverlayViewModel
     
     let poi: PointOfInterest
-    let position: CGPoint
+    
     let onCancel: () -> Void
     let onActionRequested: (ActionType, PointOfInterest) -> Void  // изменено
     
@@ -18,7 +18,6 @@ struct ActionOverlayView: View {
                 }
             
             overlayContent
-                .position(x: position.x, y: position.y)
         }
         .onAppear {
             setupViewModel()
@@ -40,7 +39,7 @@ struct ActionOverlayView: View {
     private var overlayContent: some View {
         VStack(spacing: 16) {
             
-            poiInfoHeader
+//            poiInfoHeader
             
             if viewModel.isAnalyzing {
                 ProgressView("Analyzing operations...")
@@ -50,14 +49,30 @@ struct ActionOverlayView: View {
             } else {
                 actionsSection
             }
-            
-            controlButtons
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 8)
-        .frame(maxWidth: 320)
+        .padding(.vertical)
+        .padding(.horizontal, 20)
+        .background(
+            Image(.frame1)
+                .resizable()
+                .shadow(radius: 8)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        viewModel.reset()
+                        onCancel()
+                    } label: {
+                        Image(.circleButton)
+                            .resizable()
+                            .frame(width: 32, height: 32)
+                            .overlay {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white)
+                            }
+                    }
+                }
+        )
+        .frame(maxWidth: 300)
         .confirmationDialog(
             viewModel.confirmationTitle,
             isPresented: $viewModel.showExecutionConfirm,
@@ -75,94 +90,79 @@ struct ActionOverlayView: View {
     }
     
     // MARK: - POI Info Header
-    private var poiInfoHeader: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Text(poi.type.displayName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text(poi.status.displayName)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(poiStatusColor.opacity(0.2))
-                    .foregroundColor(poiStatusColor)
-                    .cornerRadius(4)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text("Defense:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("\(poi.totalDefense)")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                }
-                
-                HStack {
-                    Text("Units:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("\(poi.currentUnits)")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                }
-                
-                if poi.defenseBonus > 0 {
-                    HStack {
-                        Text("Alert Bonus:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text("+\(poi.defenseBonus)")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.orange)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(8)
-    }
-    
-    private var poiStatusColor: Color {
-        switch poi.status {
-        case .active: return .green
-        case .captured: return .blue
-        case .destroyed: return .red
-        }
-    }
+//    private var poiInfoHeader: some View {
+//        VStack(spacing: 4) {
+//            HStack {
+//                Text(poi.type.displayName)
+//                    .laborFont(12)
+//                
+//                Spacer()
+//                
+//                Text(poi.status.displayName)
+//                    .laborFont(12, color: poiStatusColor)
+//            }
+//            
+//            VStack(alignment: .leading, spacing: 2) {
+//                HStack {
+//                    Text("Defense:")
+//                        .laborFont(10)
+//                    
+//                    Spacer()
+//                    
+//                    Text("\(poi.totalDefense)")
+//                        .laborFont(10)
+//                }
+//                
+//                HStack {
+//                    Text("Units:")
+//                        .laborFont(10)
+//                    
+//                    Spacer()
+//                    
+//                    Text("\(poi.currentUnits)")
+//                        .laborFont(10)
+//                }
+//                
+//                if poi.defenseBonus > 0 {
+//                    HStack {
+//                        Text("Alert Bonus:")
+//                            .laborFont(8)
+//                        
+//                        Spacer()
+//                        
+//                        Text("+\(poi.defenseBonus)")
+//                            .laborFont(8)
+//                    }
+//                }
+//            }
+//        }
+//        .padding(.horizontal, 6)
+//        .padding(.vertical, 4)
+//        .background(Color.gray.opacity(0.1))
+//        .cornerRadius(8)
+//    }
+//    
+//    private var poiStatusColor: Color {
+//        switch poi.status {
+//        case .active: return .green
+//        case .captured: return .white
+//        case .destroyed: return .red
+//        }
+//    }
     
     // MARK: - Error Section
     private var errorSection: some View {
         VStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.title2)
+                .font(.system(size: 18))
                 .foregroundColor(.orange)
             
             Text("Unable to perform operations")
-                .font(.subheadline)
-                .fontWeight(.medium)
+                .laborFont(8)
             
             if let error = viewModel.gameStateError {
                 Text(error)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                    .laborFont(8)
             }
         }
         .padding()
@@ -172,22 +172,14 @@ struct ActionOverlayView: View {
     
     // MARK: - Actions Section
     private var actionsSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Text("Available Operations")
-                .font(.subheadline)
-                .fontWeight(.medium)
+                .laborFont(10)
             
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 8) {
+            VStack(spacing: 4) {
                 ForEach(ActionType.allCases, id: \.rawValue) { actionType in
                     actionButton(for: actionType)
                 }
-            }
-            
-            if !viewModel.getRecommendedActions().isEmpty {
-                recommendationsSection
             }
             
             resourceSummarySection
@@ -201,34 +193,21 @@ struct ActionOverlayView: View {
                 viewModel.showExecutionConfirm(for: actionType)
             }
         }) {
-            VStack(spacing: 4) {
-                HStack(spacing: 4) {
-                    Text(actionType.icon)
-                        .font(.caption)
-                    
-                    Text(actionType.displayName)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                }
+            HStack(spacing: 4) {
+                Text(actionType.displayName)
+                    .laborFont(12)
                 
                 let percentage = viewModel.getSuccessPercentage(for: actionType)
-                Text("\(percentage)%")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(successProbabilityColor(percentage))
                 
-                Circle()
-                    .fill(riskIndicatorColor(for: actionType))
-                    .frame(width: 6, height: 6)
+                Text("\(percentage)%")
+                    .laborFont(10, color: successProbabilityColor(percentage))
             }
-            .frame(height: 60)
-            .frame(maxWidth: .infinity)
-            .background(backgroundColorForAction(actionType))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(borderColorForAction(actionType), lineWidth: 1)
+            .frame(height: 50)
+            .frame(width: 150)
+            .background(
+                Image(.rectangleButton)
+                    .resizable()
             )
-            .cornerRadius(8)
         }
         .disabled(!viewModel.canPerformAction(actionType))
     }
@@ -243,102 +222,33 @@ struct ActionOverlayView: View {
         }
     }
     
-    private func riskIndicatorColor(for actionType: ActionType) -> Color {
-        let statusColor = viewModel.getActionStatusColor(actionType)
-        switch statusColor {
-        case .good: return .green
-        case .caution: return .yellow
-        case .dangerous: return .red
-        case .unavailable: return .gray
-        }
-    }
-    
-    private func backgroundColorForAction(_ actionType: ActionType) -> Color {
-        let statusColor = viewModel.getActionStatusColor(actionType)
-        switch statusColor {
-        case .good: return .green.opacity(0.1)
-        case .caution: return .yellow.opacity(0.1)
-        case .dangerous: return .orange.opacity(0.1)
-        case .unavailable: return .gray.opacity(0.05)
-        }
-    }
-    
-    private func borderColorForAction(_ actionType: ActionType) -> Color {
-        let statusColor = viewModel.getActionStatusColor(actionType)
-        switch statusColor {
-        case .good: return .green.opacity(0.3)
-        case .caution: return .yellow.opacity(0.3)
-        case .dangerous: return .orange.opacity(0.3)
-        case .unavailable: return .gray.opacity(0.2)
-        }
-    }
-    
-    // MARK: - Recommendations Section
-    private var recommendationsSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Recommended:")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.blue)
-            
-            let recommended = viewModel.getRecommendedActions()
-            if let best = recommended.first {
-                Text(best.displayName)
-                    .font(.caption)
-                    .foregroundColor(.blue)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(6)
-    }
-    
     // MARK: - Resource Summary Section
     private var resourceSummarySection: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        HStack {
             Text("Current Resources:")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-            
-            HStack(spacing: 12) {
-                resourceIndicator("💰", viewModel.playerResources.money)
-                resourceIndicator("🔫", viewModel.playerResources.ammo)
-                resourceIndicator("🍖", viewModel.playerResources.food)
-                resourceIndicator("👤", viewModel.playerResources.units)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(6)
-    }
-    
-    private func resourceIndicator(_ icon: String, _ amount: Int) -> some View {
-        HStack(spacing: 2) {
-            Text(icon)
-                .font(.caption2)
-            Text("\(amount)")
-                .font(.caption2)
-                .fontWeight(.medium)
-        }
-    }
-    
-    // MARK: - Control Buttons
-    private var controlButtons: some View {
-        HStack(spacing: 12) {
-            Button("Cancel") {
-                viewModel.reset()
-                onCancel()
-            }
-            .foregroundColor(.secondary)
+                .laborFont(10)
             
             Spacer()
             
-            Text("Tap operation to execute")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack(spacing: 12) {
+                resourceIndicator(.coin, viewModel.playerResources.money)
+                resourceIndicator(.ammo, viewModel.playerResources.ammo)
+                resourceIndicator(.food, viewModel.playerResources.food)
+                resourceIndicator(.units, viewModel.playerResources.units)
+            }
+        }
+
+    }
+    
+    private func resourceIndicator(_ icon: ImageResource, _ amount: Int) -> some View {
+        HStack(spacing: 2) {
+            Image(icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 10)
+            
+            Text("\(amount)")
+                .laborFont(8)
         }
     }
 }
@@ -354,7 +264,6 @@ struct ActionOverlayContainer: View {
                 ActionOverlayView(
                     viewModel: coordinator.getActionOverlayViewModel(),
                     poi: poi,
-                    position: coordinator.overlayPosition,
                     onCancel: {
                         coordinator.hideActionOverlay()
                     },
@@ -375,7 +284,6 @@ struct ActionOverlayContainer: View {
         ActionOverlayView(
             viewModel: ActionOverlayViewModel(),
             poi: PointOfInterest(type: .base, position: CGPoint(x: 100, y: 100)),
-            position: CGPoint(x: 300, y: 200),
             onCancel: {},
             onActionRequested: { _, _ in }
         )
