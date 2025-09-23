@@ -7,18 +7,16 @@ struct ActionOverlayView: View {
     let poi: PointOfInterest
     let position: CGPoint
     let onCancel: () -> Void
-    let onActionExecuted: (OperationResult) -> Void
+    let onActionRequested: (ActionType, PointOfInterest) -> Void  // изменено
     
     var body: some View {
         ZStack {
-            // Semi-transparent background
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
                 .onTapGesture {
                     onCancel()
                 }
             
-            // Main overlay content
             overlayContent
                 .position(x: position.x, y: position.y)
         }
@@ -33,8 +31,8 @@ struct ActionOverlayView: View {
     // MARK: - Setup
     private func setupViewModel() {
         viewModel.selectPOI(poi)
-        viewModel.setOperationCallback { result in
-            onActionExecuted(result)
+        viewModel.setOperationCallback { actionType, poi in
+            onActionRequested(actionType, poi)
         }
     }
     
@@ -42,10 +40,8 @@ struct ActionOverlayView: View {
     private var overlayContent: some View {
         VStack(spacing: 16) {
             
-            // MARK: - POI Info Header
             poiInfoHeader
             
-            // MARK: - Actions Section
             if viewModel.isAnalyzing {
                 ProgressView("Analyzing operations...")
                     .padding()
@@ -55,7 +51,6 @@ struct ActionOverlayView: View {
                 actionsSection
             }
             
-            // MARK: - Control Buttons
             controlButtons
         }
         .padding(20)
@@ -191,12 +186,10 @@ struct ActionOverlayView: View {
                 }
             }
             
-            // Strategic recommendations
             if !viewModel.getRecommendedActions().isEmpty {
                 recommendationsSection
             }
             
-            // Resource summary
             resourceSummarySection
         }
     }
@@ -224,10 +217,8 @@ struct ActionOverlayView: View {
                     .fontWeight(.bold)
                     .foregroundColor(successProbabilityColor(percentage))
                 
-                // Risk indicator
-                let riskColor = riskIndicatorColor(for: actionType)
                 Circle()
-                    .fill(riskColor)
+                    .fill(riskIndicatorColor(for: actionType))
                     .frame(width: 6, height: 6)
             }
             .frame(height: 60)
@@ -239,7 +230,7 @@ struct ActionOverlayView: View {
             )
             .cornerRadius(8)
         }
-        .disabled(!viewModel.canPerformAction(actionType) || viewModel.isExecuting)
+        .disabled(!viewModel.canPerformAction(actionType))
     }
     
     private func successProbabilityColor(_ percentage: Int) -> Color {
@@ -345,20 +336,9 @@ struct ActionOverlayView: View {
             
             Spacer()
             
-            if viewModel.isExecuting {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    
-                    Text("Executing...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            } else {
-                Text("Tap operation to execute")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text("Tap operation to execute")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 }
@@ -378,8 +358,8 @@ struct ActionOverlayContainer: View {
                     onCancel: {
                         coordinator.hideActionOverlay()
                     },
-                    onActionExecuted: { result in
-                        coordinator.handleOperationResult(result)
+                    onActionRequested: { actionType, poi in
+                        coordinator.executeOperation(actionType: actionType, targetPOI: poi)
                     }
                 )
             }
@@ -397,7 +377,7 @@ struct ActionOverlayContainer: View {
             poi: PointOfInterest(type: .base, position: CGPoint(x: 100, y: 100)),
             position: CGPoint(x: 300, y: 200),
             onCancel: {},
-            onActionExecuted: { _ in }
+            onActionRequested: { _, _ in }
         )
     }
 }

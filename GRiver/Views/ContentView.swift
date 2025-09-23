@@ -7,7 +7,6 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Main content with navigation
                 NavigationStack(path: $coordinator.navigationPath) {
                     currentView
                         .navigationDestination(for: AppFlowState.self) { destination in
@@ -15,7 +14,7 @@ struct ContentView: View {
                         }
                 }
                 
-                // Action Overlay
+                // Action Overlay - изменен колбэк
                 if coordinator.showActionOverlay,
                    let poi = coordinator.selectedPOI {
                     ActionOverlayView(
@@ -25,8 +24,8 @@ struct ContentView: View {
                         onCancel: {
                             coordinator.hideActionOverlay()
                         },
-                        onActionExecuted: { result in
-                            coordinator.handleOperationResult(result)
+                        onActionRequested: { actionType, poi in
+                            coordinator.executeOperation(actionType: actionType, targetPOI: poi)
                         }
                     )
                     .zIndex(10)
@@ -84,7 +83,6 @@ struct ContentView: View {
                 }
             
         case .operationResult:
-            // This state is handled by overlay, fallback to game map
             GameMapView()
                 .environmentObject(coordinator.getGameSceneViewModel())
                 .environmentObject(coordinator)
@@ -118,7 +116,6 @@ struct ContentView: View {
                 }
             
         case .operationResult:
-            // Handled by overlay, show game map
             GameMapView()
                 .environmentObject(coordinator.getGameSceneViewModel())
                 .environmentObject(coordinator)
@@ -146,7 +143,6 @@ struct GameOverView: View {
     var body: some View {
         VStack(spacing: 30) {
             
-            // Game Over Header
             VStack(spacing: 8) {
                 Text(gameOverTitle)
                     .font(.largeTitle)
@@ -159,12 +155,10 @@ struct GameOverView: View {
                     .multilineTextAlignment(.center)
             }
             
-            // Game Statistics
             if let gameState = coordinator.currentGameState {
                 gameStatisticsSection(gameState)
             }
             
-            // Action Buttons
             VStack(spacing: 12) {
                 Button("New Game") {
                     coordinator.startNewGame()
@@ -178,7 +172,6 @@ struct GameOverView: View {
                 }
                 .buttonStyle(.bordered)
                 
-                // Debug button for testing
                 Button("Reset All") {
                     coordinator.resetToMainMenu()
                 }
@@ -209,7 +202,6 @@ struct GameOverView: View {
                 statCard("POIs Destroyed", "\(gameState.statistics.poisDestroyed)")
             }
             
-            // Final game progress
             let progress = Int(gameState.completionPercentage * 100)
             Text("Mission Progress: \(progress)%")
                 .font(.subheadline)

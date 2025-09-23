@@ -12,17 +12,12 @@ class ActionOverlayViewModel: ObservableObject {
     @Published var showExecutionConfirm: Bool = false
     @Published var selectedAction: ActionType?
     
-    // Execution state
-    @Published var isExecuting: Bool = false
-    @Published var executionResult: OperationResult?
-    @Published var showResult: Bool = false
-    
     // MARK: - Dependencies
     private var gameStateManager: GameStateManager?
     private let combatCalculator = CombatCalculator.self
     
-    // MARK: - Operation Callback
-    var onOperationExecuted: ((OperationResult) -> Void)?
+    // MARK: - Operation Callback (изменено: передаем actionType и poi, а не result)
+    var onOperationRequested: ((ActionType, PointOfInterest) -> Void)?
     
     // MARK: - Computed Properties
     var isVisible: Bool {
@@ -68,13 +63,12 @@ class ActionOverlayViewModel: ObservableObject {
         refreshPlayerResources()
     }
     
-    func setOperationCallback(_ callback: @escaping (OperationResult) -> Void) {
-        self.onOperationExecuted = callback
+    func setOperationCallback(_ callback: @escaping (ActionType, PointOfInterest) -> Void) {
+        self.onOperationRequested = callback
     }
     
     // MARK: - POI Selection
     func selectPOI(_ poi: PointOfInterest) {
-        // Get the latest POI data from game state if available
         if let gameManager = gameStateManager,
            let currentPOI = gameManager.getPOI(withID: poi.id) {
             selectedPOI = currentPOI
@@ -91,7 +85,6 @@ class ActionOverlayViewModel: ObservableObject {
         actionAnalyses.removeAll()
         selectedAction = nil
         hideExecutionConfirm()
-        hideResult()
     }
     
     // MARK: - Data Refresh
@@ -110,7 +103,6 @@ class ActionOverlayViewModel: ObservableObject {
         isAnalyzing = true
         actionAnalyses.removeAll()
         
-        // Analyze each action type
         for actionType in ActionType.allCases {
             let analysis = combatCalculator.analyzeOperation(
                 actionType: actionType,
@@ -157,61 +149,21 @@ class ActionOverlayViewModel: ObservableObject {
         selectedAction = nil
     }
     
-    // MARK: - Action Execution
+    // MARK: - Action Execution (изменено: передаем запрос наверх)
     func executeSelectedAction() {
         guard let actionType = selectedAction,
               let poi = selectedPOI else { return }
         
-        // Check if we have a game state manager
-        guard let gameManager = gameStateManager else {
+        guard gameStateManager != nil else {
             print("Error: No game state manager available for operation execution")
             hideExecutionConfirm()
             return
         }
         
         hideExecutionConfirm()
-        isExecuting = true
         
-        // Execute operation through game manager
-        let result = gameManager.executeOperation(actionType: actionType, targetPOI: poi)
-        
-        // Update local state
-        executionResult = result
-        refreshPlayerResources()
-        
-        isExecuting = false
-        
-        // Notify callback if available (for coordination with AppCoordinator)
-        if let callback = onOperationExecuted {
-            callback(result)
-        } else {
-            // Fallback to showing result locally
-            showResult = true
-        }
-        
-        // Update POI if it was captured or destroyed
-        if result.success {
-            switch actionType {
-            case .capture, .destruction:
-                // POI state has changed, need to refresh
-                if let updatedPOI = gameManager.getPOI(withID: poi.id) {
-                    selectedPOI = updatedPOI
-                }
-            default:
-                // For raid and robbery, POI stays operational but might be weakened
-                if let updatedPOI = gameManager.getPOI(withID: poi.id) {
-                    selectedPOI = updatedPOI
-                }
-            }
-        }
-        
-        // Re-analyze actions with new resources/POI state
-        analyzeAllActions()
-    }
-    
-    func hideResult() {
-        showResult = false
-        executionResult = nil
+        // Передаем запрос на выполнение операции координатору
+        onOperationRequested?(actionType, poi)
     }
     
     // MARK: - Action Validation
@@ -277,7 +229,6 @@ class ActionOverlayViewModel: ObservableObject {
     }
     
     func shouldShowAction(_ actionType: ActionType) -> Bool {
-        // Show all actions, but disable unavailable ones
         return true
     }
     
@@ -347,8 +298,7 @@ class ActionOverlayViewModel: ObservableObject {
         deselectPOI()
         actionAnalyses.removeAll()
         isAnalyzing = false
-        isExecuting = false
-        onOperationExecuted = nil
+        onOperationRequested = nil
     }
     
     // MARK: - Debug Support
@@ -357,7 +307,6 @@ class ActionOverlayViewModel: ObservableObject {
         info += "Has GameState: \(hasValidGameState)\n"
         info += "Selected POI: \(selectedPOI?.type.displayName ?? "None")\n"
         info += "Available Actions: \(availableActions.count)\n"
-        info += "Is Executing: \(isExecuting)\n"
         
         if let error = gameStateError {
             info += "Error: \(error)\n"
