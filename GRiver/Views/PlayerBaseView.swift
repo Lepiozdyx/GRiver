@@ -14,15 +14,15 @@ struct PlayerBaseView: View {
                         .offset(y: -30)
                 }
             
-            VStack {
+            HStack {
                 buildingsSection
+                
+                Spacer()
                 
                 unitRecruitmentSection
                 
                 supplyPurchaseSection
             }
-//            .padding(.top, 40)
-//            .padding(.horizontal)
             .padding()
         }
         .padding()
@@ -40,6 +40,7 @@ struct PlayerBaseView: View {
         }
     }
     
+    // MARK: - Section
     private var resourcesSection: some View {
         HStack(spacing: 10) {
             resourceCard1("\(viewModel.playerResources.money)", .coin)
@@ -89,30 +90,37 @@ struct PlayerBaseView: View {
             }
     }
     
+    // MARK: - Section
     private var buildingsSection: some View {
         VStack(spacing: 8) {
             buildingRow(
-                title: "Storage",
-                level: viewModel.baseManager.storageLevel,
-                maxLevel: BuildingType.storage.maxLevel,
-                upgradeCost: viewModel.getUpgradeCost(for: .storage),
-                canUpgrade: viewModel.canUpgradeStorage,
-                upgradeAction: viewModel.upgradeStorage
-            )
-            
-            buildingRow(
                 title: "Barracks",
+                image: .warehouse,
+                type: .units,
                 level: viewModel.baseManager.barracksLevel,
                 maxLevel: BuildingType.barracks.maxLevel,
                 upgradeCost: viewModel.getUpgradeCost(for: .barracks),
                 canUpgrade: viewModel.canUpgradeBarracks,
                 upgradeAction: viewModel.upgradeBarracks
             )
+            
+            buildingRow(
+                title: "Storage",
+                image: .base,
+                type: .box,
+                level: viewModel.baseManager.storageLevel,
+                maxLevel: BuildingType.storage.maxLevel,
+                upgradeCost: viewModel.getUpgradeCost(for: .storage),
+                canUpgrade: viewModel.canUpgradeStorage,
+                upgradeAction: viewModel.upgradeStorage
+            )
         }
     }
     
     private func buildingRow(
         title: String,
+        image: ImageResource,
+        type: ImageResource,
         level: Int,
         maxLevel: Int,
         upgradeCost: Resource,
@@ -120,35 +128,62 @@ struct PlayerBaseView: View {
         upgradeAction: @escaping () -> Void
     ) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(spacing: 4) {
                 Text(title)
                     .laborFont(10)
                 
+                HStack(spacing: 4) {
+                    Image(image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 90)
+                    
+                    Image(type)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 25)
+                        .overlay {
+                            Image(systemName: "plus")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                }
+                
                 Text("Level \(level)/\(maxLevel)")
                     .laborFont(10)
-            }
-            
-            Spacer()
-            
-            if level < maxLevel {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(upgradeCost.money)")
-                        .laborFont(12)
-                    
-                    Button("Upgrade") {
-                        upgradeAction()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.mini)
-                    .disabled(!canUpgrade)
+                
+                Button {
+                    upgradeAction()
+                } label: {
+                    Image(.rectangleButton)
+                        .resizable()
+                        .frame(width: 100, height: 40)
+                        .overlay {
+                            if level < maxLevel {
+                                HStack(spacing: 2) {
+                                    Image(.coin)
+                                        .resizable()
+                                        .frame(width: 20, height: 20)
+                                    
+                                    Text("\(upgradeCost.money)")
+                                        .laborFont(12)
+                                    
+                                    Image(.coin)
+                                        .resizable()
+                                        .frame(width: 20, height: 20)
+                                }
+                            } else {
+                                Text("MAX")
+                                    .laborFont(14)
+                            }
+                        }
                 }
-            } else {
-                Text("MAX")
-                    .laborFont(14)
+                .disabled(!canUpgrade)
             }
         }
     }
     
+    // MARK: - Section
     private var unitRecruitmentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Unit")
