@@ -9,10 +9,6 @@ struct MainMenuView: View {
             
             logoSection
             
-            if viewModel.hasSavedGame {
-                savedGameInfoSection
-            }
-            
             mangeButtonSection
             
             mainButtonsSection
@@ -117,16 +113,25 @@ struct MainMenuView: View {
     private var mangeButtonSection: some View {
         VStack {
             if viewModel.hasSavedGame {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Saved Game Available")
+                        .laborFont(10)
+                    
+                    Text(viewModel.savedGameInfo)
+                        .laborFont(8)
+                }
+            }
+            
+            if viewModel.hasSavedGame {
                 Button {
                     viewModel.handleManageProgress()
                 } label: {
                     HStack {
                         Image(systemName: "gear")
                         Text("Manage Progress")
-                            .fontWeight(.medium)
+                            .laborFont(10)
                     }
-                    .frame(maxWidth: 200)
-                    .frame(height: 50)
+                    .frame(width: 150, height: 40)
                     .background(Color.secondary.opacity(0.5))
                     .foregroundColor(.primary)
                     .cornerRadius(12)
@@ -139,10 +144,9 @@ struct MainMenuView: View {
                         HStack {
                             Image(systemName: "trash")
                             Text("Delete")
-                                .fontWeight(.medium)
+                                .laborFont(10)
                         }
-                        .frame(maxWidth: 200)
-                        .frame(height: 50)
+                        .frame(width: 150, height: 40)
                         .background(Color.red.opacity(0.5))
                         .foregroundColor(.red)
                         .cornerRadius(12)
@@ -153,22 +157,6 @@ struct MainMenuView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-    }
-    
-    private var savedGameInfoSection: some View {
-        VStack {
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("Saved Game Available")
-                    .laborFont(10)
-                
-                Text(viewModel.savedGameInfo)
-                    .laborFont(8)
-            }
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
         .padding()
     }
     
