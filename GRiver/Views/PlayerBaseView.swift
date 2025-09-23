@@ -5,18 +5,28 @@ struct PlayerBaseView: View {
     let onClose: (() -> Void)?
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                resourcesSection
-                
+        ZStack {
+            Image(.frame1)
+                .resizable()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    resourcesSection
+                        .offset(y: -30)
+                }
+            
+            VStack {
                 buildingsSection
                 
                 unitRecruitmentSection
                 
                 supplyPurchaseSection
             }
+//            .padding(.top, 40)
+//            .padding(.horizontal)
             .padding()
         }
+        .padding()
+        .padding(.top, 40)
         .navigationBarHidden(true)
         .alert(viewModel.alertTitle, isPresented: $viewModel.showUpgradeAlert) {
             Button("OK") {
@@ -31,15 +41,32 @@ struct PlayerBaseView: View {
     }
     
     private var resourcesSection: some View {
-        HStack(spacing: 6) {
-            resourceCard("\(viewModel.playerResources.money)", .coin)
-            resourceCard("\(viewModel.playerResources.units)", .units)
-            resourceCard("\(viewModel.playerResources.ammo)", .ammo)
-            resourceCard("\(viewModel.playerResources.food)", .food)
+        HStack(spacing: 10) {
+            resourceCard1("\(viewModel.playerResources.money)", .coin)
+            resourceCard1("\(viewModel.playerResources.units)", .units)
+            resourceCard2("\(viewModel.playerResources.ammo)", .ammo)
+            resourceCard2("\(viewModel.playerResources.food)", .food)
         }
     }
     
-    private func resourceCard(_ value: String, _ icon: ImageResource) -> some View {
+    private func resourceCard1(_ value: String, _ icon: ImageResource) -> some View {
+        Image(icon)
+            .resizable()
+            .frame(width: 60, height: 60)
+            .overlay(alignment: .bottom) {
+                ZStack {
+                    Image(.frame2)
+                        .resizable()
+                        .frame(width: 60, height: 30)
+                    
+                    Text(value)
+                        .laborFont(14)
+                }
+                .offset(y: 20)
+            }
+    }
+    
+    private func resourceCard2(_ value: String, _ icon: ImageResource) -> some View {
         Image(.box)
             .resizable()
             .frame(width: 60, height: 60)
@@ -47,7 +74,7 @@ struct PlayerBaseView: View {
                 Image(icon)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 35)
+                    .frame(width: 15)
             }
             .overlay(alignment: .bottom) {
                 ZStack {
@@ -252,5 +279,4 @@ struct PlayerBaseView: View {
 #Preview {
     PlayerBaseView(onClose: { })
         .environmentObject(BaseViewModel())
-        .preferredColorScheme(.dark)
 }
