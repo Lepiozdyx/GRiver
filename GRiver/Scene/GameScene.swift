@@ -299,7 +299,8 @@ class GameScene: SKScene {
     private func findPOI(at position: CGPoint) -> PointOfInterest? {
         guard let mapManager = mapManager else { return nil }
         
-        let tolerance: CGFloat = 40.0
+        // Use dynamic tolerance based on the largest POI size
+        let tolerance: CGFloat = 50.0 // Increased tolerance for larger assets
         return mapManager.poi(at: position, tolerance: tolerance)
     }
     
@@ -413,7 +414,7 @@ class POINode: SKSpriteNode {
     private var poi: PointOfInterest
     private let typeLabel: SKLabelNode
     private let statusIndicator: SKShapeNode
-    private let selectionRing: SKShapeNode
+    private var selectionRing: SKShapeNode
     
     init(poi: PointOfInterest) {
         self.poi = poi
@@ -422,52 +423,74 @@ class POINode: SKSpriteNode {
         typeLabel.fontSize = 10
         typeLabel.fontColor = .white
         typeLabel.text = poi.type.displayName.prefix(3).uppercased()
-        typeLabel.position = CGPoint(x: 0, y: -30)
+        typeLabel.position = CGPoint(x: 0, y: -poi.type.size.height/2 - 15)
         typeLabel.zPosition = 2
         
         statusIndicator = SKShapeNode(circleOfRadius: 4)
-        statusIndicator.position = CGPoint(x: 12, y: 12)
+        statusIndicator.position = CGPoint(x: poi.type.size.width/2 - 8, y: poi.type.size.height/2 - 8)
         statusIndicator.zPosition = 2
         
-        selectionRing = SKShapeNode(circleOfRadius: 25)
+        let ringRadius = max(poi.type.size.width, poi.type.size.height) / 2 + 5
+        selectionRing = SKShapeNode(circleOfRadius: ringRadius)
         selectionRing.strokeColor = .cyan
         selectionRing.lineWidth = 2
         selectionRing.fillColor = .clear
         selectionRing.zPosition = 0
         selectionRing.isHidden = true
         
-        let texture = SKTexture()
-        super.init(texture: texture, color: .clear, size: CGSize(width: 30, height: 30))
+        // Load the texture for this POI type
+        let texture = SKTexture(imageNamed: poi.type.imageName)
+        super.init(texture: texture, color: .clear, size: poi.type.size)
         
-        setupAppearance()
         addChild(typeLabel)
         addChild(statusIndicator)
         addChild(selectionRing)
+        
+        updateStatusIndicator()
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func setupAppearance() {
-        switch poi.type {
-        case .base:
-            color = .red
-        case .village:
-            color = .brown
-        case .warehouse:
-            color = .gray
-        case .station:
-            color = .blue
-        case .factory:
-            color = .purple
+    private func updateStatusIndicator() {
+        switch poi.status {
+        case .active:
+            statusIndicator.fillColor = .green
+            statusIndicator.strokeColor = .green
+        case .captured:
+            statusIndicator.fillColor = .blue
+            statusIndicator.strokeColor = .blue
+        case .destroyed:
+            statusIndicator.fillColor = .black
+            statusIndicator.strokeColor = .black
         }
-        
-        updateStatusIndicator()
     }
     
     func updatePOI(_ newPOI: PointOfInterest) {
         self.poi = newPOI
+        
+        // Update texture and size if POI type changed
+        let newTexture = SKTexture(imageNamed: newPOI.type.imageName)
+        self.texture = newTexture
+        self.size = newPOI.type.size
+        
+        // Update label and status indicator positions based on new size
+        typeLabel.position = CGPoint(x: 0, y: -newPOI.type.size.height/2 - 15)
+        statusIndicator.position = CGPoint(x: newPOI.type.size.width/2 - 8, y: newPOI.type.size.height/2 - 8)
+        
+        // Update selection ring radius
+        let ringRadius = max(newPOI.type.size.width, newPOI.type.size.height) / 2 + 5
+        selectionRing.removeFromParent()
+        let newSelectionRing = SKShapeNode(circleOfRadius: ringRadius)
+        newSelectionRing.strokeColor = .cyan
+        newSelectionRing.lineWidth = 2
+        newSelectionRing.fillColor = .clear
+        newSelectionRing.zPosition = 0
+        newSelectionRing.isHidden = true
+        addChild(newSelectionRing)
+        selectionRing = newSelectionRing
+        
         updateStatusIndicator()
         updateTypeLabel()
     }
@@ -487,20 +510,6 @@ class POINode: SKSpriteNode {
             selectionRing.run(SKAction.repeatForever(pulseAction))
         } else {
             selectionRing.removeAllActions()
-        }
-    }
-    
-    private func updateStatusIndicator() {
-        switch poi.status {
-        case .active:
-            statusIndicator.fillColor = .green
-            statusIndicator.strokeColor = .green
-        case .captured:
-            statusIndicator.fillColor = .blue
-            statusIndicator.strokeColor = .blue
-        case .destroyed:
-            statusIndicator.fillColor = .black
-            statusIndicator.strokeColor = .black
         }
     }
     

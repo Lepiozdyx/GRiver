@@ -19,6 +19,20 @@ enum POIType: String, CaseIterable, Codable {
         }
     }
     
+    var imageName: String {
+        return self.rawValue
+    }
+    
+    var size: CGSize {
+        switch self {
+        case .base: return CGSize(width: 70, height: 30)
+        case .village: return CGSize(width: 90, height: 70)
+        case .warehouse: return CGSize(width: 60, height: 60)
+        case .station: return CGSize(width: 65, height: 65)
+        case .factory: return CGSize(width: 75, height: 75)
+        }
+    }
+    
     var baseDefense: Int {
         switch self {
         case .base: return 50
