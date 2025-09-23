@@ -238,17 +238,17 @@ struct GameState: Codable {
     // MARK: - Default POI Generation
     static func generateDefaultPOIs() -> [PointOfInterest] {
         return [
-            PointOfInterest(type: .base, position: CGPoint(x: 100, y: 150)),
-            PointOfInterest(type: .base, position: CGPoint(x: 800, y: 200)),
-            PointOfInterest(type: .village, position: CGPoint(x: 200, y: 300)),
-            PointOfInterest(type: .village, position: CGPoint(x: 400, y: 100)),
-            PointOfInterest(type: .village, position: CGPoint(x: 600, y: 350)),
-            PointOfInterest(type: .warehouse, position: CGPoint(x: 300, y: 250)),
-            PointOfInterest(type: .warehouse, position: CGPoint(x: 700, y: 120)),
-            PointOfInterest(type: .station, position: CGPoint(x: 150, y: 400)),
-            PointOfInterest(type: .station, position: CGPoint(x: 500, y: 280)),
+            PointOfInterest(type: .base, position: CGPoint(x: 200, y: 700)),
+            PointOfInterest(type: .base, position: CGPoint(x: 450, y: 400)),
+            PointOfInterest(type: .village, position: CGPoint(x: 700, y: 600)),
+            PointOfInterest(type: .village, position: CGPoint(x: 300, y: 100)),
+            PointOfInterest(type: .village, position: CGPoint(x: 650, y: 450)),
+            PointOfInterest(type: .warehouse, position: CGPoint(x: 300, y: 600)),
+            PointOfInterest(type: .warehouse, position: CGPoint(x: 650, y: 200)),
+            PointOfInterest(type: .station, position: CGPoint(x: 500, y: 650)),
+            PointOfInterest(type: .station, position: CGPoint(x: 150, y: 350)),
             PointOfInterest(type: .factory, position: CGPoint(x: 350, y: 380)),
-            PointOfInterest(type: .factory, position: CGPoint(x: 750, y: 300))
+            PointOfInterest(type: .factory, position: CGPoint(x: 750, y: 400))
         ]
     }
 }
