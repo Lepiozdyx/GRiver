@@ -413,7 +413,7 @@ class GameScene: SKScene {
 class POINode: SKSpriteNode {
     private var poi: PointOfInterest
     private let typeLabel: SKLabelNode
-    private let statusIndicator: SKShapeNode
+    private let statusIndicator: SKSpriteNode
     private var selectionRing: SKShapeNode
     
     init(poi: PointOfInterest) {
@@ -426,7 +426,9 @@ class POINode: SKSpriteNode {
         typeLabel.position = CGPoint(x: 0, y: -poi.type.size.height/2 - 15)
         typeLabel.zPosition = 2
         
-        statusIndicator = SKShapeNode(circleOfRadius: 4)
+        // Create status indicator with assets instead of shapes
+        statusIndicator = SKSpriteNode()
+        statusIndicator.size = CGSize(width: 15, height: 15)
         statusIndicator.position = CGPoint(x: poi.type.size.width/2 - 8, y: poi.type.size.height/2 - 8)
         statusIndicator.zPosition = 2
         
@@ -456,14 +458,14 @@ class POINode: SKSpriteNode {
     private func updateStatusIndicator() {
         switch poi.status {
         case .active:
-            statusIndicator.fillColor = .green
-            statusIndicator.strokeColor = .green
+            // Use enemyUnits asset for non-player controlled POIs
+            statusIndicator.texture = SKTexture(imageNamed: "enemyUnits")
         case .captured:
-            statusIndicator.fillColor = .blue
-            statusIndicator.strokeColor = .blue
+            // Use units asset for player-controlled POIs
+            statusIndicator.texture = SKTexture(imageNamed: "units")
         case .destroyed:
-            statusIndicator.fillColor = .black
-            statusIndicator.strokeColor = .black
+            // Use fire asset for destroyed POIs
+            statusIndicator.texture = SKTexture(imageNamed: "fire")
         }
     }
     

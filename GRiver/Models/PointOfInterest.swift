@@ -25,11 +25,11 @@ enum POIType: String, CaseIterable, Codable {
     
     var size: CGSize {
         switch self {
-        case .base: return CGSize(width: 70, height: 30)
-        case .village: return CGSize(width: 90, height: 70)
-        case .warehouse: return CGSize(width: 60, height: 60)
-        case .station: return CGSize(width: 65, height: 65)
-        case .factory: return CGSize(width: 75, height: 75)
+        case .base: return CGSize(width: 60, height: 25)
+        case .village: return CGSize(width: 95, height: 70)
+        case .warehouse: return CGSize(width: 60, height: 50)
+        case .station: return CGSize(width: 75, height: 75)
+        case .factory: return CGSize(width: 85, height: 85)
         }
     }
     
