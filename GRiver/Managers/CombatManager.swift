@@ -109,17 +109,8 @@ class CombatCalculator {
             return Resource.zero
         }
         
-        // Return rewards according to TS specifications
-        switch actionType {
-        case .raid:
-            return Resource(money: 0, ammo: 5, food: 5, units: 5)
-        case .robbery:
-            return Resource(money: 0, ammo: 10, food: 10, units: 5)
-        case .capture:
-            return Resource(money: 0, ammo: 15, food: 15, units: 10)
-        case .destruction:
-            return Resource(money: 0, ammo: 1, food: 1, units: 1)
-        }
+        // Use POI-specific rewards that include proper money calculations
+        return actionType.successReward(for: targetPOI)
     }
     
     // MARK: - Pre-Operation Analysis
