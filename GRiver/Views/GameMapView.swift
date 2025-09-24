@@ -4,6 +4,8 @@ import SpriteKit
 struct GameMapView: View {
     @EnvironmentObject var viewModel: GameSceneViewModel
     @EnvironmentObject var coordinator: AppCoordinator
+    @State private var showOnboarding = false
+    @State private var isFirstLaunch = true
     
     var body: some View {
         ZStack {
@@ -50,6 +52,19 @@ struct GameMapView: View {
                 }
             }
             
+            // Onboarding View - shown only for new games
+            if showOnboarding {
+                VStack {
+                    Spacer()
+                    HStack {
+                        OnboardingView(isVisible: $showOnboarding)
+                        Spacer()
+                    }
+                }
+                .padding(.leading, 20)
+                .padding(.bottom, 20)
+            }
+            
             if coordinator.showBaseOverlay {
                 baseManagementOverlay
                     .zIndex(20)
@@ -60,6 +75,7 @@ struct GameMapView: View {
         .statusBarHidden()
         .onAppear {
             initializeScene()
+            checkForNewGame()
         }
     }
     
@@ -68,6 +84,25 @@ struct GameMapView: View {
         
         if !viewModel.isSceneReady {
             viewModel.setGameStateManager(coordinator.gameStateManager)
+        }
+    }
+    
+    // Check if this is a new game and show onboarding if needed
+    private func checkForNewGame() {
+        // Only show onboarding for new games (when statistics are at initial values)
+        if let gameState = coordinator.currentGameState {
+            let isNewGame = gameState.statistics.operationsPerformed == 0 && 
+                           gameState.statistics.poisCaptured == 0 && 
+                           gameState.statistics.poisDestroyed == 0
+            
+            if isNewGame && isFirstLaunch {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        showOnboarding = true
+                        isFirstLaunch = false
+                    }
+                }
+            }
         }
     }
     
