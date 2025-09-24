@@ -188,10 +188,12 @@ class GameScene: SKScene {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // Update active touches first
         for touch in touches {
             activeTouches[touch] = touch.location(in: self)
         }
         
+        // Handle gestures based on current touch count
         if activeTouches.count == 2 {
             handlePinch()
         } else if activeTouches.count == 1 {
@@ -257,14 +259,12 @@ class GameScene: SKScene {
               let currentPosition = activeTouches.values.first else { return }
         
         if let lastPosition = lastPanPosition {
-            let delta = CGPoint(
-                x: currentPosition.x - lastPosition.x,
-                y: currentPosition.y - lastPosition.y
-            )
+            let deltaX = (currentPosition.x - lastPosition.x) * camera.xScale
+            let deltaY = (currentPosition.y - lastPosition.y) * camera.xScale
             
             let newPosition = CGPoint(
-                x: camera.position.x - delta.x,
-                y: camera.position.y - delta.y
+                x: camera.position.x - deltaX,
+                y: camera.position.y - deltaY
             )
             
             camera.position = constrainCameraPosition(newPosition)
@@ -282,10 +282,12 @@ class GameScene: SKScene {
         let locations = Array(activeTouches.values)
         let currentDistance = distance(from: locations[0], to: locations[1])
         
-        let scaleChange = initialDistance / currentDistance
+        // Fixed scale calculation
+        let scaleChange = currentDistance / initialDistance
         let newScale = initialScale * scaleChange
         let constrainedScale = max(minZoomScale, min(maxZoomScale, newScale))
         
+        // Single camera update
         camera.setScale(constrainedScale)
         camera.position = constrainCameraPosition(camera.position)
     }
