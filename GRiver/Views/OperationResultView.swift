@@ -3,59 +3,47 @@ import SwiftUI
 // MARK: - Operation Result View
 struct OperationResultView: View {
     @StateObject private var viewModel = OperationResultViewModel()
-    @Environment(\.dismiss) private var dismiss
     
     let operationResult: OperationResult
     let onContinue: () -> Void
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 10) {
-                    
-                    // MARK: - Result Header
-                    resultHeaderSection
-                    
-                    // MARK: - Operation Summary
-                    operationSummarySection
-                    
-                    // MARK: - Resource Changes
-                    resourceChangesSection
-                    
-                    // MARK: - Game Status
-                    gameStatusSection
-                    
-                    // MARK: - Impact Analysis
-                    if viewModel.canShowAnalysis {
-                        impactAnalysisSection
-                    }
-                    
-                    // MARK: - Strategic Analysis
-                    if viewModel.showDetailedAnalysis {
-                        strategicAnalysisSection
-                    }
-                    
-                    // MARK: - Recommendations
-                    if viewModel.showRecommendations {
-                        recommendationsSection
-                    }
-                    
-                    // MARK: - Action Buttons
-                    actionButtonsSection
-                    
-                    Spacer(minLength: 20)
+        ScrollView {
+            VStack(spacing: 10) {
+                
+                // MARK: - Result Header
+                resultHeaderSection
+                
+                // MARK: - Operation Summary
+                operationSummarySection
+                
+                // MARK: - Resource Changes
+                resourceChangesSection
+                
+                // MARK: - Game Status
+                gameStatusSection
+                
+                // MARK: - Impact Analysis
+                if viewModel.canShowAnalysis {
+                    impactAnalysisSection
                 }
-                .padding()
-            }
-            .navigationTitle("Mission Report")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        onContinue()
-                    }
+                
+                // MARK: - Strategic Analysis
+                if viewModel.showDetailedAnalysis {
+                    strategicAnalysisSection
                 }
+                
+                // MARK: - Recommendations
+                if viewModel.showRecommendations {
+                    recommendationsSection
+                }
+                
+                // MARK: - Action Buttons
+                actionButtonsSection
+                
+                Spacer(minLength: 20)
             }
+            .padding()
         }
         .onAppear {
             viewModel.processResult(operationResult)
@@ -335,82 +323,192 @@ struct OperationResultStandaloneView: View {
     
     var body: some View {
         ZStack {
-            // Semi-transparent background
-            Color.black.opacity(0.4)
+            Color.black.opacity(0.3)
                 .ignoresSafeArea()
                 .onTapGesture {
                     onContinue()
                 }
             
-            // Compact result content
-            VStack(spacing: 16) {
-                
-                // Result Header
-                VStack(spacing: 4) {
-                    Text(operationResult.success ? "SUCCESS" : "FAILURE")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(operationResult.success ? .green : .red)
-                    
-                    Text(operationResult.outcomeMessage)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                
-                // Quick Summary
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(operationResult.actionType.displayName) on \(operationResult.targetPOI.type.displayName)")
-                        .font(.headline)
-                    
-                    Text("Success chance was \(operationResult.successPercentage)%")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                // Resource Impact (if any)
-                if !operationResult.resourcesLost.isEmpty || !operationResult.resourcesGained.isEmpty {
-                    VStack(spacing: 4) {
-                        if !operationResult.resourcesLost.isEmpty {
-                            Text("Lost: \(formatResourcesCompact(operationResult.resourcesLost))")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                        
-                        if !operationResult.resourcesGained.isEmpty {
-                            Text("Gained: \(formatResourcesCompact(operationResult.resourcesGained))")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                    }
-                }
-                
-                // Continue Button
-                Button("Continue") {
-                    onContinue()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(20)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(radius: 8)
-            .frame(maxWidth: 350)
+            overlayContent
         }
         .onAppear {
             viewModel.processResult(operationResult)
         }
     }
     
-    private func formatResourcesCompact(_ resource: Resource) -> String {
-        var parts: [String] = []
-        
-        if resource.money > 0 { parts.append("\(resource.money)💰") }
-        if resource.ammo > 0 { parts.append("\(resource.ammo)🔫") }
-        if resource.food > 0 { parts.append("\(resource.food)🍖") }
-        if resource.units > 0 { parts.append("\(resource.units)👤") }
-        
-        return parts.isEmpty ? "None" : parts.joined(separator: " ")
+    private var overlayContent: some View {
+        VStack(spacing: 12) {
+            resultHeader
+            
+            operationDetails
+            
+            if hasResourceChanges {
+                resourceChanges
+            }
+            
+            continueButton
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
+        .background(
+            Image(.frame1)
+                .resizable()
+                .shadow(radius: 8)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        onContinue()
+                    } label: {
+                        Image(.circleButton)
+                            .resizable()
+                            .frame(width: 32, height: 32)
+                            .overlay {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white)
+                            }
+                    }
+                    .padding(8)
+                }
+        )
+        .frame(maxWidth: 380)
+    }
+    
+    private var resultHeader: some View {
+        VStack(spacing: 4) {
+            Text(operationResult.success ? "MISSION SUCCESS" : "MISSION FAILED")
+                .laborFont(18, color: operationResult.success ? .green : .red)
+            
+            Text(operationResult.outcomeMessage)
+                .laborFont(12, color: .white.opacity(0.8), textAlignment: .center)
+                .multilineTextAlignment(.center)
+        }
+    }
+    
+    private var operationDetails: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text("Action:")
+                    .laborFont(12)
+                
+                Spacer()
+                
+                Text(operationResult.actionType.displayName)
+                    .laborFont(12, color: .cyan)
+            }
+            
+            HStack {
+                Text("Target:")
+                    .laborFont(12)
+                
+                Spacer()
+                
+                Text(operationResult.targetPOI.type.displayName)
+                    .laborFont(12, color: .cyan)
+            }
+            
+            HStack {
+                Text("Success Rate:")
+                    .laborFont(12)
+                
+                Spacer()
+                
+                Text("\(operationResult.successPercentage)%")
+                    .laborFont(12, color: probabilityColor)
+            }
+        }
+    }
+    
+    private var resourceChanges: some View {
+        VStack(spacing: 8) {
+            if !operationResult.resourcesLost.isEmpty {
+                resourceChangeRow("Lost:", operationResult.resourcesLost, isGain: false)
+            }
+            
+            if !operationResult.resourcesGained.isEmpty {
+                resourceChangeRow("Gained:", operationResult.resourcesGained, isGain: true)
+            }
+            
+            if operationResult.netValue != 0 {
+                HStack {
+                    Text("Net Result:")
+                        .laborFont(12)
+                    
+                    Spacer()
+                    
+                    Text("\(operationResult.netValue > 0 ? "+" : "")\(operationResult.netValue)")
+                        .laborFont(12, color: operationResult.netValue > 0 ? .green : .red)
+                }
+            }
+        }
+    }
+    
+    private func resourceChangeRow(_ title: String, _ resource: Resource, isGain: Bool) -> some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text(title)
+                    .laborFont(12, color: isGain ? .green : .red)
+                
+                Spacer()
+            }
+            
+            HStack(spacing: 12) {
+                if resource.money > 0 {
+                    resourceIndicator(.coin, resource.money, isGain: isGain)
+                }
+                if resource.ammo > 0 {
+                    resourceIndicator(.ammo, resource.ammo, isGain: isGain)
+                }
+                if resource.food > 0 {
+                    resourceIndicator(.food, resource.food, isGain: isGain)
+                }
+                if resource.units > 0 {
+                    resourceIndicator(.units, resource.units, isGain: isGain)
+                }
+                
+                Spacer()
+            }
+        }
+    }
+    
+    private func resourceIndicator(_ icon: ImageResource, _ amount: Int, isGain: Bool) -> some View {
+        HStack(spacing: 2) {
+            Image(icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 12)
+            
+            Text("\(isGain ? "+" : "-")\(amount)")
+                .laborFont(10, color: isGain ? .green : .red)
+        }
+    }
+    
+    private var continueButton: some View {
+        Button {
+            onContinue()
+        } label: {
+            Image(.rectangleButton)
+                .resizable()
+                .frame(width: 180, height: 50)
+                .overlay {
+                    Text("Continue")
+                        .laborFont(16)
+                }
+        }
+    }
+    
+    private var probabilityColor: Color {
+        let percentage = operationResult.successPercentage
+        if percentage >= 70 {
+            return .green
+        } else if percentage >= 50 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+    
+    private var hasResourceChanges: Bool {
+        return !operationResult.resourcesLost.isEmpty || !operationResult.resourcesGained.isEmpty || operationResult.netValue != 0
     }
 }
 
@@ -427,7 +525,7 @@ struct OperationResultStandaloneView: View {
         successProbability: 0.75
     )
     
-    OperationResultView(operationResult: sampleResult) {
+    OperationResultStandaloneView(operationResult: sampleResult) {
         print("Continue pressed")
     }
 }
