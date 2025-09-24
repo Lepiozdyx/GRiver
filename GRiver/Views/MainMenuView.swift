@@ -7,6 +7,8 @@ struct MainMenuView: View {
         ZStack {
             Image(.menuBg).resizable().ignoresSafeArea()
             
+            soldierSection
+            
             logoSection
             
             mangeButtonSection
@@ -169,6 +171,21 @@ struct MainMenuView: View {
             Spacer()
         }
         .padding()
+    }
+    
+    private var soldierSection: some View {
+        HStack {
+            Spacer()
+            
+            VStack {
+                Spacer()
+                
+                Image(.character1)
+                    .resizable()
+                    .frame(width: 250, height: 350)
+                    .offset(y: 30)
+            }
+        }
     }
 }
 
