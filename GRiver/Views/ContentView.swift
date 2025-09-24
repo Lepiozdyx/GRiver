@@ -160,7 +160,17 @@ struct GameOverView: View {
                 gameStatisticsSection(gameState)
             }
             
-            actionButtons
+            Button {
+                coordinator.navigateToMainMenu()
+            } label: {
+                Image(.rectangleButton)
+                    .resizable()
+                    .frame(width: 150, height: 50)
+                    .overlay {
+                        Text("Main Menu")
+                            .laborFont(16)
+                    }
+            }
         }
         .padding(.vertical)
         .padding(.horizontal, 20)
@@ -202,47 +212,6 @@ struct GameOverView: View {
             
             Text(value)
                 .laborFont(12, color: .green)
-        }
-    }
-    
-    private var actionButtons: some View {
-        VStack(spacing: 4) {
-            Button {
-                coordinator.startNewGame()
-                coordinator.navigateToGameMap()
-            } label: {
-                Image(.rectangleButton)
-                    .resizable()
-                    .frame(width: 150, height: 50)
-                    .overlay {
-                        Text("New Game")
-                            .laborFont(16)
-                    }
-            }
-            
-            Button {
-                coordinator.navigateToMainMenu()
-            } label: {
-                Image(.rectangleButton)
-                    .resizable()
-                    .frame(width: 150, height: 50)
-                    .overlay {
-                        Text("Main Menu")
-                            .laborFont(16)
-                    }
-            }
-            
-            Button {
-                coordinator.resetToMainMenu()
-            } label: {
-                Image(.rectangleButton)
-                    .resizable()
-                    .frame(width: 150, height: 50)
-                    .overlay {
-                        Text("Reset All")
-                            .laborFont(16)
-                    }
-            }
         }
     }
     

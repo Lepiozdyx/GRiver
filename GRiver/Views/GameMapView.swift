@@ -72,7 +72,7 @@ struct GameMapView: View {
     }
     
     private var mapTopBarControl: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .top, spacing: 16) {
             Button {
                 coordinator.navigateToMainMenu()
             } label: {
@@ -88,12 +88,131 @@ struct GameMapView: View {
             
             Spacer()
             
-            Text(viewModel.mapStatistics)
-                .laborFont(10)
+            resourcesSection
             
             Spacer()
+            
+            alarmSection
         }
         .padding()
+    }
+    
+    private var resourcesSection: some View {
+        HStack(spacing: 4) {
+            let resources = coordinator.currentGameState?.resources ?? Resource.zero
+            
+            resourceCard1("\(resources.money)", .coin)
+            resourceCard1("\(resources.units)", .units)
+            resourceCard2("\(resources.ammo)", .ammo)
+            resourceCard2("\(resources.food)", .food)
+        }
+    }
+    
+    private func resourceCard1(_ value: String, _ icon: ImageResource) -> some View {
+        Image(icon)
+            .resizable()
+            .frame(width: 40, height: 40)
+            .overlay(alignment: .bottom) {
+                ZStack {
+                    Image(.frame2)
+                        .resizable()
+                        .frame(width: 40, height: 20)
+                    
+                    Text(value)
+                        .laborFont(10)
+                }
+                .offset(y: 12)
+            }
+    }
+    
+    private func resourceCard2(_ value: String, _ icon: ImageResource) -> some View {
+        Image(.box)
+            .resizable()
+            .frame(width: 40, height: 40)
+            .overlay {
+                Image(icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 12)
+            }
+            .overlay(alignment: .bottom) {
+                ZStack {
+                    Image(.frame2)
+                        .resizable()
+                        .frame(width: 40, height: 20)
+                    
+                    Text(value)
+                        .laborFont(10)
+                }
+                .offset(y: 12)
+            }
+    }
+    
+    private var alarmSection: some View {
+        let alertLevel = coordinator.currentGameState?.alertPercentage ?? 0
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text("ALARM")
+                    .laborFont(14)
+                
+                Spacer()
+                
+                Text("\(alertLevel)%")
+                    .laborFont(14)
+            }
+            
+            alarmBar(alertLevel: alertLevel)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 4)
+        .background(Color.yellow.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .frame(width: 200)
+    }
+    
+    private func alarmBar(alertLevel: Int) -> some View {
+        let segmentCount = 20
+        let filledSegments = Int(Double(alertLevel) / 100.0 * Double(segmentCount))
+        
+        return HStack(spacing: 2) {
+            ForEach(0..<segmentCount, id: \.self) { index in
+                Rectangle()
+                    .fill(segmentColor(for: index, total: segmentCount, filled: filledSegments))
+                    .frame(width: 6, height: 20)
+            }
+        }
+        .background(Color.black.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 2))
+    }
+    
+    private func segmentColor(for index: Int, total: Int, filled: Int) -> Color {
+        if index >= filled {
+            return Color.gray.opacity(0.3)
+        }
+        
+        let progress = Double(index) / Double(total)
+        
+        switch progress {
+        case 0.0..<0.15:
+            return Color(red: 0.0, green: 0.5, blue: 0.0) // Dark green
+        case 0.15..<0.3:
+            return Color(red: 0.0, green: 0.7, blue: 0.0) // Medium green
+        case 0.3..<0.45:
+            return Color(red: 0.2, green: 0.8, blue: 0.0) // Light green
+        case 0.45..<0.55:
+            return Color(red: 0.5, green: 0.8, blue: 0.0) // Yellow-green
+        case 0.55..<0.65:
+            return Color(red: 0.8, green: 0.8, blue: 0.0) // Yellow
+        case 0.65..<0.75:
+            return Color(red: 1.0, green: 0.6, blue: 0.0) // Orange
+        case 0.75..<0.85:
+            return Color(red: 1.0, green: 0.4, blue: 0.0) // Red-orange
+        case 0.85..<0.95:
+            return Color(red: 1.0, green: 0.2, blue: 0.0) // Red
+        default:
+            return Color(red: 1.0, green: 0.0, blue: 0.0) // Bright red
+        }
     }
     
     private var bottomOverlay: some View {
