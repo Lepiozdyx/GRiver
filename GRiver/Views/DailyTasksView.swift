@@ -2,7 +2,6 @@ import SwiftUI
 
 struct DailyTasksView: View {
     @EnvironmentObject var coordinator: AppCoordinator
-    @StateObject private var achievementsManager = AchievementsManager.shared
     
     var body: some View {
         ZStack {

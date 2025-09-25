@@ -278,54 +278,6 @@ struct GameOverView: View {
     }
 }
 
-// MARK: - New View Stubs
-struct ShopView: View {
-    @EnvironmentObject var coordinator: AppCoordinator
-    
-    var body: some View {
-        ZStack {
-            Image(.menuBg).resizable().ignoresSafeArea()
-            
-            VStack {
-                topBar
-                
-                Spacer()
-                
-                Text("Shop Coming Soon")
-                    .laborFont(24)
-                
-                Spacer()
-            }
-        }
-        .navigationBarBackButtonHidden(true)
-    }
-    
-    private var topBar: some View {
-        HStack {
-            Button {
-                coordinator.navigateToMainMenu()
-            } label: {
-                Image(.squareButton)
-                    .resizable()
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Image(.homeIcon)
-                            .resizable()
-                            .frame(width: 20, height: 20)
-                    }
-            }
-            
-            Spacer()
-            
-            Text("Shop")
-                .laborFont(20)
-            
-            Spacer()
-        }
-        .padding()
-    }
-}
-
 // MARK: - Preview
 #Preview {
     ContentView()
