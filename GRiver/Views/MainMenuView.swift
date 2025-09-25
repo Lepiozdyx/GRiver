@@ -143,30 +143,40 @@ struct MainMenuView: View {
                 Button {
                     viewModel.handleManageProgress()
                 } label: {
-                    HStack {
-                        Image(systemName: "gear")
-                        Text("Manage Progress")
-                            .laborFont(10)
-                    }
-                    .frame(width: 150, height: 40)
-                    .background(Color.secondary.opacity(0.5))
-                    .foregroundColor(.primary)
-                    .cornerRadius(12)
+                    Image(.rectangleButton)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 150)
+                        .overlay {
+                            HStack(spacing: 2) {
+                                Image(systemName: "gear")
+                                    .foregroundStyle(.white)
+                                    .font(.system(size: 16))
+                                
+                                Text("Manage Progress")
+                                    .laborFont(8)
+                            }
+                        }
                 }
                 
                 if viewModel.showManageProgress {
                     Button {
                         viewModel.handleDeleteProgress()
                     } label: {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Delete")
-                                .laborFont(10)
-                        }
-                        .frame(width: 150, height: 40)
-                        .background(Color.red.opacity(0.5))
-                        .foregroundColor(.red)
-                        .cornerRadius(12)
+                        Image(.rectangleButton)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: 150)
+                            .overlay {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(.red)
+                                        .font(.system(size: 16))
+                                    
+                                    Text("Delete")
+                                        .laborFont(8, color: .red)
+                                }
+                            }
                     }
                 }
             }
