@@ -192,5 +192,4 @@ struct MainMenuView: View {
 #Preview {
     MainMenuView()
         .environmentObject(MainMenuViewModel())
-        .preferredColorScheme(.dark)
 }
