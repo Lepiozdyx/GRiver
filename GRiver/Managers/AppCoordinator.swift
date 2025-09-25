@@ -8,7 +8,6 @@ enum AppFlowState: String, CaseIterable {
     case operationResult = "operationResult"
     case gameOver = "gameOver"
     case settings = "settings"
-    case shop = "shop"
     case achievements = "achievements"
     case dailyTasks = "dailyTasks"
     
@@ -19,7 +18,6 @@ enum AppFlowState: String, CaseIterable {
         case .operationResult: return "Operation Result"
         case .gameOver: return "Game Over"
         case .settings: return "Settings"
-        case .shop: return "Shop"
         case .achievements: return "Achievements"
         case .dailyTasks: return "Daily Tasks"
         }
@@ -75,8 +73,6 @@ class AppCoordinator: ObservableObject {
             handleContinueGame()
         case .toSettings:
             navigateToSettings()
-        case .toShop:
-            navigateToShop()
         case .toAchievements:
             navigateToAchievements()
         case .toDailyTasks:
@@ -145,13 +141,6 @@ class AppCoordinator: ObservableObject {
         withAnimation {
             currentFlow = .settings
             navigationPath.append(AppFlowState.settings)
-        }
-    }
-    
-    func navigateToShop() {
-        withAnimation {
-            currentFlow = .shop
-            navigationPath.append(AppFlowState.shop)
         }
     }
     
@@ -393,7 +382,6 @@ enum NavigationRequest {
     case startNewGame
     case continueGame
     case toSettings
-    case toShop
     case toAchievements
     case toDailyTasks
 }

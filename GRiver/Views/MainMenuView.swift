@@ -70,20 +70,7 @@ struct MainMenuView: View {
                     }
             }
             
-             HStack {
-                 Button {
-                     viewModel.handleShopAction()
-                 } label: {
-                     Image(.rectangleButton)
-                         .resizable()
-                         .scaledToFit()
-                         .frame(maxWidth: 200)
-                         .overlay {
-                             Text("Shop")
-                                 .laborFont(20)
-                         }
-                 }
-                
+             HStack { 
                  Button {
                      viewModel.handleAchievementsAction()
                  } label: {

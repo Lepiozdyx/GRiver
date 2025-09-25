@@ -91,10 +91,6 @@ struct ContentView: View {
             SettingsView()
                 .environmentObject(coordinator)
                 
-        case .shop:
-            ShopView()
-                .environmentObject(coordinator)
-                
         case .achievements:
             AchievementsView()
                 .environmentObject(coordinator)
@@ -138,10 +134,6 @@ struct ContentView: View {
                 
         case .settings:
             SettingsView()
-                .environmentObject(coordinator)
-                
-        case .shop:
-            ShopView()
                 .environmentObject(coordinator)
                 
         case .achievements:

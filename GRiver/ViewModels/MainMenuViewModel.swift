@@ -69,10 +69,6 @@ class MainMenuViewModel: ObservableObject {
         navigationSubject.send(.toSettings)
     }
     
-    func handleShopAction() {
-        navigationSubject.send(.toShop)
-    }
-    
     func handleAchievementsAction() {
         navigationSubject.send(.toAchievements)
     }
