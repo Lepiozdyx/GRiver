@@ -86,6 +86,22 @@ struct ContentView: View {
         case .gameOver:
             GameOverView()
                 .environmentObject(coordinator)
+                
+        case .settings:
+            SettingsView()
+                .environmentObject(coordinator)
+                
+        case .shop:
+            ShopView()
+                .environmentObject(coordinator)
+                
+        case .achievements:
+            AchievementsView()
+                .environmentObject(coordinator)
+                
+        case .dailyTasks:
+            DailyTasksView()
+                .environmentObject(coordinator)
         }
     }
     
@@ -118,6 +134,22 @@ struct ContentView: View {
             
         case .gameOver:
             GameOverView()
+                .environmentObject(coordinator)
+                
+        case .settings:
+            SettingsView()
+                .environmentObject(coordinator)
+                
+        case .shop:
+            ShopView()
+                .environmentObject(coordinator)
+                
+        case .achievements:
+            AchievementsView()
+                .environmentObject(coordinator)
+                
+        case .dailyTasks:
+            DailyTasksView()
                 .environmentObject(coordinator)
         }
     }
@@ -243,6 +275,148 @@ struct GameOverView: View {
         case .defeat: return "Your base was discovered!\nThe mission has failed."
         default: return "Game session ended"
         }
+    }
+}
+
+// MARK: - New View Stubs
+struct ShopView: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+    
+    var body: some View {
+        ZStack {
+            Image(.menuBg).resizable().ignoresSafeArea()
+            
+            VStack {
+                topBar
+                
+                Spacer()
+                
+                Text("Shop Coming Soon")
+                    .laborFont(24)
+                
+                Spacer()
+            }
+        }
+        .navigationBarBackButtonHidden(true)
+    }
+    
+    private var topBar: some View {
+        HStack {
+            Button {
+                coordinator.navigateToMainMenu()
+            } label: {
+                Image(.squareButton)
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .overlay {
+                        Image(.homeIcon)
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                    }
+            }
+            
+            Spacer()
+            
+            Text("Shop")
+                .laborFont(20)
+            
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+struct AchievementsView: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+    
+    var body: some View {
+        ZStack {
+            Image(.menuBg).resizable().ignoresSafeArea()
+            
+            VStack {
+                topBar
+                
+                Spacer()
+                
+                Text("Achievements Coming Soon")
+                    .laborFont(24)
+                
+                Spacer()
+            }
+        }
+        .navigationBarBackButtonHidden(true)
+    }
+    
+    private var topBar: some View {
+        HStack {
+            Button {
+                coordinator.navigateToMainMenu()
+            } label: {
+                Image(.squareButton)
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .overlay {
+                        Image(.homeIcon)
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                    }
+            }
+            
+            Spacer()
+            
+            Text("Achievements")
+                .laborFont(20)
+            
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+struct DailyTasksView: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+    
+    var body: some View {
+        ZStack {
+            Image(.menuBg).resizable().ignoresSafeArea()
+            
+            VStack {
+                topBar
+                
+                Spacer()
+                
+                Text("Daily Tasks Coming Soon")
+                    .laborFont(24)
+                
+                Spacer()
+            }
+        }
+        .navigationBarBackButtonHidden(true)
+    }
+    
+    private var topBar: some View {
+        HStack {
+            Button {
+                coordinator.navigateToMainMenu()
+            } label: {
+                Image(.squareButton)
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .overlay {
+                        Image(.homeIcon)
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                    }
+            }
+            
+            Spacer()
+            
+            Text("Daily Tasks")
+                .laborFont(20)
+            
+            Spacer()
+        }
+        .padding()
     }
 }
 

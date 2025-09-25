@@ -72,7 +72,7 @@ struct MainMenuView: View {
             
              HStack {
                  Button {
-                     // ShopView()
+                     viewModel.handleShopAction()
                  } label: {
                      Image(.rectangleButton)
                          .resizable()
@@ -85,7 +85,7 @@ struct MainMenuView: View {
                  }
                 
                  Button {
-                     // AchieveView()
+                     viewModel.handleAchievementsAction()
                  } label: {
                      Image(.rectangleButton)
                          .resizable()
@@ -98,7 +98,7 @@ struct MainMenuView: View {
                  }
                  
                  Button {
-                     // DailyTasksView()
+                     viewModel.handleDailyTasksAction()
                  } label: {
                      Image(.rectangleButton)
                          .resizable()
@@ -111,7 +111,7 @@ struct MainMenuView: View {
                  }
                  
                  Button {
-                     // SettingsView()
+                     viewModel.handleSettingsAction()
                  } label: {
                      Image(.rectangleButton)
                          .resizable()

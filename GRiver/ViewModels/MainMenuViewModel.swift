@@ -6,6 +6,10 @@ enum NavigationDestination: String, CaseIterable {
     case gameMap = "gameMap"
     case operationResult = "operationResult"
     case gameOver = "gameOver"
+    case settings = "settings"
+    case shop = "shop"
+    case achievements = "achievements"
+    case dailyTasks = "dailyTasks"
     
     var displayName: String {
         switch self {
@@ -13,6 +17,10 @@ enum NavigationDestination: String, CaseIterable {
         case .gameMap: return "Global Map"
         case .operationResult: return "Operation Result"
         case .gameOver: return "Game Over"
+        case .settings: return "Settings"
+        case .shop: return "Shop"
+        case .achievements: return "Achievements"
+        case .dailyTasks: return "Daily Tasks"
         }
     }
 }
@@ -55,6 +63,22 @@ class MainMenuViewModel: ObservableObject {
         } else {
             navigationSubject.send(.startNewGame)
         }
+    }
+    
+    func handleSettingsAction() {
+        navigationSubject.send(.toSettings)
+    }
+    
+    func handleShopAction() {
+        navigationSubject.send(.toShop)
+    }
+    
+    func handleAchievementsAction() {
+        navigationSubject.send(.toAchievements)
+    }
+    
+    func handleDailyTasksAction() {
+        navigationSubject.send(.toDailyTasks)
     }
     
     func handleManageProgress() {

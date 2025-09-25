@@ -7,6 +7,10 @@ enum AppFlowState: String, CaseIterable {
     case gameMap = "gameMap"
     case operationResult = "operationResult"
     case gameOver = "gameOver"
+    case settings = "settings"
+    case shop = "shop"
+    case achievements = "achievements"
+    case dailyTasks = "dailyTasks"
     
     var displayName: String {
         switch self {
@@ -14,6 +18,10 @@ enum AppFlowState: String, CaseIterable {
         case .gameMap: return "Global Map"
         case .operationResult: return "Operation Result"
         case .gameOver: return "Game Over"
+        case .settings: return "Settings"
+        case .shop: return "Shop"
+        case .achievements: return "Achievements"
+        case .dailyTasks: return "Daily Tasks"
         }
     }
 }
@@ -65,6 +73,14 @@ class AppCoordinator: ObservableObject {
             handleStartNewGame()
         case .continueGame:
             handleContinueGame()
+        case .toSettings:
+            navigateToSettings()
+        case .toShop:
+            navigateToShop()
+        case .toAchievements:
+            navigateToAchievements()
+        case .toDailyTasks:
+            navigateToDailyTasks()
         }
     }
     
@@ -122,6 +138,34 @@ class AppCoordinator: ObservableObject {
         withAnimation {
             currentFlow = .gameOver
             navigationPath.append(AppFlowState.gameOver)
+        }
+    }
+    
+    func navigateToSettings() {
+        withAnimation {
+            currentFlow = .settings
+            navigationPath.append(AppFlowState.settings)
+        }
+    }
+    
+    func navigateToShop() {
+        withAnimation {
+            currentFlow = .shop
+            navigationPath.append(AppFlowState.shop)
+        }
+    }
+    
+    func navigateToAchievements() {
+        withAnimation {
+            currentFlow = .achievements
+            navigationPath.append(AppFlowState.achievements)
+        }
+    }
+    
+    func navigateToDailyTasks() {
+        withAnimation {
+            currentFlow = .dailyTasks
+            navigationPath.append(AppFlowState.dailyTasks)
         }
     }
     
@@ -348,6 +392,10 @@ enum NavigationRequest {
     case toMainMenu
     case startNewGame
     case continueGame
+    case toSettings
+    case toShop
+    case toAchievements
+    case toDailyTasks
 }
 
 extension Notification.Name {
