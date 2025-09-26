@@ -6,7 +6,7 @@ import Combine
 class NetworkManager: ObservableObject {
     @Published private(set) var gameURL: URL?
     
-    static let initialURL = URL(string: "https://")!
+    static let initialURL = URL(string: "https://griverclube.com/data")!
     private let storage: UserDefaults
     private var didSaveURL = false
     private let requestTimeout: TimeInterval = 10.0
