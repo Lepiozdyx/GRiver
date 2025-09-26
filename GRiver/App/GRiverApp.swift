@@ -6,7 +6,7 @@ struct GRiverApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentSourceView()
         }
     }
 }
