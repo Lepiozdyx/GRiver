@@ -36,14 +36,14 @@ struct MainMenuView: View {
             Text("All progress will be lost permanently. Sure?")
         }
         .onAppear {
-//            OrientationManager.shared.lockLandscape()
+            OrientationManager.shared.lockLandscape()
             settings.playBackgroundMusic()
             viewModel.checkForSavedGame()
         }
         .onChange(of: scenePhase) { newPhase in
             switch newPhase {
             case .active:
-//                OrientationManager.shared.lockLandscape()
+                OrientationManager.shared.lockLandscape()
                 settings.playBackgroundMusic()
             case .background, .inactive:
                 settings.stopBackgroundMusic()
