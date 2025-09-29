@@ -1,35 +1,36 @@
 import SwiftUI
 
 struct ContentSourceView: View {
-    
-    @StateObject private var manager = AppStateManager()
+    @StateObject private var state = AppStateManager()
+    @StateObject private var fcmManager = FCMManager.shared
         
     var body: some View {
         Group {
-            switch manager.appState {
-            case .request:
+            switch state.appState {
+            case .fetch:
                 LoadingView()
                 
-            case .support:
-                if let url = manager.networkManager.gameURL {
-                    WKWebViewManager(
-                        url: url,
-                        webManager: manager.networkManager
+            case .supp:
+                if let url = state.webManager.targetURL {
+                    WebViewManager(url: url, webManager: state.webManager)
+                } else if let fcmToken = fcmManager.fcmToken {
+                    WebViewManager(
+                        url: NetworkManager.getInitialURL(fcmToken: fcmToken),
+                        webManager: state.webManager
                     )
                 } else {
-                    WKWebViewManager(
+                    WebViewManager(
                         url: NetworkManager.initialURL,
-                        webManager: manager.networkManager
+                        webManager: state.webManager
                     )
                 }
                 
-            case .loading:
+            case .final:
                 ContentView()
-                    .preferredColorScheme(.light)
             }
         }
         .onAppear {
-            manager.stateRequest()
+            state.stateCheck()
         }
     }
 }
