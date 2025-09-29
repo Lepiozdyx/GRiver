@@ -35,6 +35,9 @@ workflows:
         - name: Fetch signing files
           script: |
             app-store-connect fetch-signing-files $BUNDLE_ID --type IOS_APP_STORE --platform=IOS --create --certificate-key-password='236236'
+        - name: Fetch signing files for ext
+          script: |
+            app-store-connect fetch-signing-files "$BUNDLE_ID.NotificationService" --type IOS_APP_STORE --platform=IOS --create --certificate-key-password='236236'
         - name: Use system default keychain
           script: |
             keychain add-certificates
@@ -47,7 +50,10 @@ workflows:
             agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
         - name: Build ipa for distribution
           script: |
-            xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+            xcode-project build-ipa \
+              --project "$XCODE_PROJECT" \
+              --scheme "$XCODE_SCHEME" \
+              --archive-flags="-destination 'generic/platform=iOS'"  
       artifacts:
         - build/ios/ipa/*.ipa
         - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
@@ -62,8 +68,8 @@ workflows:
             #       - group name 2
         email:
             recipients:
-              - alexzhulai@gmail.com
-              - alexzhulai@gmail.com
+              - someEmail@rmail.com
+              - someEmail@rmail.com
             notify:
               success: true
               failure: true
