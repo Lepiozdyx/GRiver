@@ -80,10 +80,6 @@ class NetworkManager: ObservableObject {
             return true
         }
         
-        if url.host?.contains("google.com") == true {
-            return true
-        }
-        
         return false
     }
     
