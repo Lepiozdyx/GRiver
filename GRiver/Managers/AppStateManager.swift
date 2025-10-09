@@ -13,7 +13,7 @@ final class AppStateManager: ObservableObject {
     let webManager: NetworkManager
     
     private var timeoutTask: Task<Void, Never>?
-    private let maxLoadingTime: TimeInterval = 15.0
+    private let maxLoadingTime: TimeInterval = 8.0
     
     init(webManager: NetworkManager) {
         self.webManager = webManager

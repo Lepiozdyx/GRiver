@@ -6,10 +6,10 @@ import Combine
 class NetworkManager: ObservableObject {
     @Published private(set) var targetURL: URL?
     
-    static let BASE_URL = "https://griverclube.com/data"
+    static let BASE_URL = "https://griclubear.com/data"
     private let storage: UserDefaults
     private var didSaveURL = false
-    private let requestTimeout: TimeInterval = 10.0
+    private let requestTimeout: TimeInterval = 5.0
     
     init(storage: UserDefaults = .standard) {
         self.storage = storage
